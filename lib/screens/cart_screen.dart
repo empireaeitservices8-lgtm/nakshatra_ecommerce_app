@@ -143,10 +143,17 @@ class CartScreen extends StatelessWidget {
                                         padding: const EdgeInsets.all(6),
                                         child: ClipRRect(
                                           borderRadius: BorderRadius.circular(12),
-                                          child: Image.asset(
-                                            item.imagePath,
-                                            fit: BoxFit.contain,
-                                          ),
+                                          child: item.imagePath.startsWith('http')
+                                              ? Image.network(
+                                                  item.imagePath,
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (context, error, stackTrace) =>
+                                                      Image.asset('assets/images/product1.png', fit: BoxFit.contain),
+                                                )
+                                              : Image.asset(
+                                                  item.imagePath,
+                                                  fit: BoxFit.contain,
+                                                ),
                                         ),
                                       ),
                                     ),
@@ -552,7 +559,19 @@ class CartScreen extends StatelessWidget {
               ],
             ),
             child: ElevatedButton(
-              onPressed: () => Navigator.pushNamed(context, CheckoutScreen.path),
+              onPressed: () {
+                if (cart.isLoggedIn) {
+                  Navigator.pushNamed(context, CheckoutScreen.path);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please login to proceed to checkout"),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  Navigator.pushNamed(context, '/login');
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,

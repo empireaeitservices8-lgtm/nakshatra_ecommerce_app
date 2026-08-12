@@ -129,8 +129,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(context);
     return Scaffold(
-      backgroundColor: Provider.of<CartProvider>(context).isDarkMode
+      backgroundColor: cartProvider.isDarkMode
           ? const Color(0xFF121212)
           : Colors.white,
       body: SafeArea(
@@ -357,44 +358,44 @@ class HomeScreen extends StatelessWidget {
               ),
 
               // ── PRODUCT GRID ─────────────────────────────────────────────
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                childAspectRatio: 0.59,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-                children: const [
-                  ProductCard(
-                    id: '1',
-                    title: "Bangles Set",
-                    subtitle: "Gold",
-                    price: "₹120.00",
-                    imagePath: 'assets/images/product1.png',
-                  ),
-                  ProductCard(
-                    id: '2',
-                    title: "Wedding Set",
-                    subtitle: "Gold",
-                    price: "₹369.00",
-                    imagePath: 'assets/images/product5.png',
-                  ),
-                  ProductCard(
-                    id: '3',
-                    title: "Diamond Ring",
-                    subtitle: "Diamond and Gold",
-                    price: "₹369.00",
-                    imagePath: 'assets/images/product3.png',
-                  ),
-                  ProductCard(
-                    id: '4',
-                    title: "Necklace Set",
-                    subtitle: "Gold",
-                    price: "₹369.00",
-                    imagePath: 'assets/images/product2.png',
-                  ),
-                ],
-              ),
+              cartProvider.isLoading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40.0),
+                        child: CircularProgressIndicator(color: goldAccent),
+                      ),
+                    )
+                  : cartProvider.products.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40.0),
+                            child: Text(
+                              "No products available in this branch.",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.59,
+                            crossAxisSpacing: 15,
+                            mainAxisSpacing: 15,
+                          ),
+                          itemCount: cartProvider.products.length,
+                          itemBuilder: (context, index) {
+                            final p = cartProvider.products[index];
+                            return ProductCard(
+                              id: p.id,
+                              title: p.title,
+                              subtitle: p.subtitle,
+                              price: p.price,
+                              imagePath: p.imagePath,
+                            );
+                          },
+                        ),
               const SizedBox(height: 25),
             ],
           ),
@@ -405,11 +406,16 @@ class HomeScreen extends StatelessWidget {
 
   // ── Open full-screen search ────────────────────────────────────────────────
   void _openSearch(BuildContext context, {String? initialQuery}) {
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    final currentProducts = cart.products.map((p) => p.toMap()).toList();
     Navigator.push(
       context,
       PageRouteBuilder(
         pageBuilder: (_, __, ___) =>
-            SearchScreen(allProducts: allProducts, initialQuery: initialQuery),
+            SearchScreen(
+              allProducts: currentProducts.isNotEmpty ? currentProducts : allProducts,
+              initialQuery: initialQuery,
+            ),
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 250),
@@ -492,6 +498,7 @@ class HomeScreen extends StatelessWidget {
                                 : null,
                             onTap: () {
                               _selectedLocation.value = loc;
+                              Provider.of<CartProvider>(context, listen: false).updateLocation(loc);
                               Navigator.pop(context);
                             },
                           );
@@ -633,11 +640,13 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.only(right: 14),
       child: GestureDetector(
         onTap: () {
+          final cart = Provider.of<CartProvider>(context, listen: false);
+          final currentProducts = cart.products.map((p) => p.toMap()).toList();
           Navigator.push(
             context,
             PageRouteBuilder(
               pageBuilder: (_, __, ___) => SearchScreen(
-                allProducts: HomeScreen.allProducts,
+                allProducts: currentProducts.isNotEmpty ? currentProducts : HomeScreen.allProducts,
                 initialQuery: title,
               ),
               transitionsBuilder: (_, anim, __, child) =>

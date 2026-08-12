@@ -2874,93 +2874,115 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _placeOrder(CartProvider cart) {
-    final isDark = cart.isDarkMode;
-    final cardWhite = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
+  Future<void> _placeOrder(CartProvider cart) async {
+    final addr = _addresses.firstWhere((a) => a['id'] == _selectedAddressId, orElse: () => _addresses.first);
+    final addressText = addr['address'] ?? '';
+    final phoneText = addr['phone'] ?? '';
+    final cityText = addressText.toLowerCase().contains('kochi') || addressText.toLowerCase().contains('kakkanad') ? 'Kochi' : 'Calicut';
 
-    cart.clearCart();
-    cart.setTabIndex(0);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: cardWhite,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        title: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: _emeraldGreen.withOpacity(0.08),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.check_circle_rounded,
-            color: _emeraldGreen,
-            size: 80,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Order Placed!",
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: textDark,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "Your handcrafted jewelry is being prepared with love and care.",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: isDark ? Colors.grey.shade400 : Colors.black54,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  colors: [_emeraldGreen, Color(0xFF1B382A)],
-                ),
-              ),
-              child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  "Back to Home",
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    final res = await cart.checkout(
+      paymentMethod: _selectedPaymentMethod,
+      shippingAddress: addressText,
+      shippingCity: cityText,
+      shippingPhone: phoneText,
+      notes: "Handcrafted jewellery order.",
     );
+
+    if (mounted) {
+      if (res['status'] == 'success') {
+        final isDark = cart.isDarkMode;
+        final cardWhite = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+        final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            backgroundColor: cardWhite,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            title: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _emeraldGreen.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: _emeraldGreen,
+                size: 80,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Order Placed!",
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Your handcrafted jewelry is being prepared with love and care.",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: isDark ? Colors.grey.shade400 : Colors.black54,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      colors: [_emeraldGreen, Color(0xFF1B382A)],
+                    ),
+                  ),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      "Back to Home",
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message'] ?? "Checkout failed. Please try again."),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 

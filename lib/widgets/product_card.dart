@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../models/cart_item.dart';
+import '../models/product.dart';
 
 class ProductCard extends StatefulWidget {
   final String id, title, subtitle, price, imagePath;
@@ -21,6 +22,20 @@ class ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<ProductCard> {
   bool isWishlisted = false;
+
+  Widget _buildImage(String path, {BoxFit fit = BoxFit.cover}) {
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset('assets/images/product1.png', fit: fit);
+        },
+      );
+    } else {
+      return Image.asset(path, fit: fit);
+    }
+  }
 
   void _showProductDetails(BuildContext context) {
     final isDark = Provider.of<CartProvider>(context, listen: false).isDarkMode;
@@ -67,7 +82,7 @@ class _ProductCardState extends State<ProductCard> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(widget.imagePath, fit: BoxFit.contain),
+                    child: _buildImage(widget.imagePath, fit: BoxFit.contain),
                   ),
                 ),
               ),
@@ -221,33 +236,67 @@ class _ProductCardState extends State<ProductCard> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(
-                      widget.imagePath,
-                      fit: BoxFit.cover,
+                    child: SizedBox(
                       width: double.infinity,
                       height: double.infinity,
+                      child: _buildImage(widget.imagePath, fit: BoxFit.cover),
                     ),
                   ),
                   // Wishlist Button (Top Right of image container)
                   Positioned(
                     top: 10,
                     right: 10,
-                    child: GestureDetector(
-                      onTap: () => setState(() => isWishlisted = !isWishlisted),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isWishlisted ? Icons.favorite : Icons.favorite_border,
-                          color: isWishlisted
-                              ? const Color(0xFFD4AF37)
-                              : (isDark ? Colors.white70 : Colors.black54),
-                          size: 15,
-                        ),
-                      ),
+                    child: Consumer<CartProvider>(
+                      builder: (context, cartProvider, child) {
+                        final isWish = cartProvider.isProductWishlisted(widget.id);
+                        return GestureDetector(
+                          onTap: () async {
+                            if (!cartProvider.isLoggedIn) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please login to wishlist items"),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
+                            await cartProvider.toggleWishlist(Product(
+                              id: widget.id,
+                              title: widget.title,
+                              subtitle: widget.subtitle,
+                              price: widget.price,
+                              imagePath: widget.imagePath,
+                              category: '',
+                              gender: '',
+                            ));
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(isWish
+                                      ? "Removed from Wishlist"
+                                      : "Added to Wishlist"),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isWish ? Icons.favorite : Icons.favorite_border,
+                              color: isWish
+                                  ? const Color(0xFFD4AF37)
+                                  : (isDark ? Colors.white70 : Colors.black54),
+                              size: 15,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
