@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/cart_provider.dart';
+import '../viewmodels/auth_viewmodel.dart';
+import '../helpers/sp_helper.dart';
+import '../helpers/toast_helper.dart';
+import '../services/token_manager.dart';
 
 class LoginScreen extends StatefulWidget {
   static const String path = '/login';
@@ -12,59 +15,42 @@ class LoginScreen extends StatefulWidget {
 
 class LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
-  final TextEditingController _emailCtrl = TextEditingController();
-  final TextEditingController _passwordCtrl = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedSession();
+  }
+
+  void _checkSavedSession() {
+    final token = SPHelper.getToken();
+    if (token != null && token.isNotEmpty) {
+      TokenManager.setToken(token);
+      final user = SPHelper.getUser();
+      final authVM = Provider.of<AuthViewModel>(context, listen: false);
+      if (user != null) {
+        authVM.setCurrentUser(user);
+      }
+      authVM.loadProfile(); // Refresh profile in background
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleLogin() async {
-    final email = _emailCtrl.text.trim();
-    final password = _passwordCtrl.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter both email and password"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    final response = await cartProvider.login(email, password);
-
-    if (mounted) {
-      if (response['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Welcome to Nakshathra, ${cartProvider.userName}!"),
-            backgroundColor: const Color(0xFF2E513D),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response['message'] ?? "Login failed. Please check credentials."),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
-
     return Scaffold(
       body: Stack(
         children: [
@@ -96,87 +82,69 @@ class LoginScreenState extends State<LoginScreen> {
 
           // 3. Content Layout
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 30.0,
-                vertical: 20.0,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distributes Top, Center, Bottom
-                children: [
-                  // --- TOP SECTION: LOGO ---
-                  Column(
-                    children: [
-                      const SizedBox(height: 120),
-                      Image.asset(
-                        'assets/images/logo.png',
-                        height: 120,
-                      ), // Replace with your logo
-                      const SizedBox(height: 10),
-                    ],
-                  ),
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30.0,
+                  vertical: 20.0,
+                ),
+                child: Column(
+                  children: [
+                    // --- TOP SECTION: LOGO ---
+                    const SizedBox(height: 60),
+                    Image.asset(
+                      'assets/images/logo.png',
+                      height: 120,
+                    ), // Replace with your logo
+                    const SizedBox(height: 40),
 
-                  // --- CENTER SECTION: LOGIN FORM ---
-                  Column(
-                    children: [
-                      const SizedBox(height: 30),
-                      _buildWhiteInputField(
-                        hint: "Email or Mobile Number",
-                        icon: Icons.email_outlined,
-                        controller: _emailCtrl,
-                        inputType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 15),
-                      _buildWhiteInputField(
-                        hint: "Password",
-                        icon: Icons.lock_outline,
-                        controller: _passwordCtrl,
-                        isPassword: true,
-                        obscureText: _obscurePassword,
-                        onPasswordToggle: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
+                    // --- CENTER SECTION: LOGIN FORM ---
+                    _buildWhiteInputField(
+                      hint: "Email Address",
+                      icon: Icons.email_outlined,
+                      inputType: TextInputType.emailAddress,
+                      controller: _emailController,
+                    ),
+                    const SizedBox(height: 15),
+                    _buildWhiteInputField(
+                      hint: "Password",
+                      icon: Icons.lock_outline,
+                      isPassword: true,
+                      obscureText: _obscurePassword,
+                      onPasswordToggle: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      controller: _passwordController,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildMainButton("Login"),
+
+                    const SizedBox(height: 60),
+
+                    // --- BOTTOM SECTION: SOCIAL & SIGNUP ---
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "New to Nakshathra? ",
+                          style: TextStyle(color: Colors.white70),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      cartProvider.isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                            )
-                          : _buildMainButton("Login"),
-                    ],
-                  ),
-
-                  // --- BOTTOM SECTION: SOCIAL & SIGNUP ---
-                  Column(
-                    children: [
-                      const SizedBox(height: 30),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            "New to Nakshathra? ",
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          GestureDetector(
-                            onTap: () =>
-                                Navigator.pushNamed(context, '/signup'),
-                            child: const Text(
-                              "Sign Up",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
+                        GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/signup'),
+                          child: const Text(
+                            "Sign Up",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.underline,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                  ),
-                ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
               ),
             ),
           ),
@@ -208,31 +176,57 @@ class LoginScreenState extends State<LoginScreen> {
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: Colors.white70),
-          prefixIcon: Icon(icon, color: Colors.white70),
+          hintStyle: const TextStyle(color: Colors.white38),
+          prefixIcon: Icon(icon, color: Colors.white54),
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
                     obscureText
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: Colors.white70,
+                    color: Colors.white54,
                   ),
                   onPressed: onPasswordToggle,
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 18,
+            horizontal: 20,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildMainButton(String text) {
+    final authVM = Provider.of<AuthViewModel>(context);
     return Material(
       color: Colors.transparent, // Required for InkWell to show ripple
       child: InkWell(
-        onTap: _handleLogin,
+        onTap: authVM.isLoading
+            ? null
+            : () async {
+                final email = _emailController.text.trim();
+                final password = _passwordController.text.trim();
+                if (email.isEmpty || password.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter email and password'),
+                    ),
+                  );
+                  return;
+                }
+                final success = await authVM.login(email, password);
+                if (success) {
+                  Navigator.pushReplacementNamed(context, '/home');
+                } else {
+                  ToastHelper.showErrorToast(
+                    context,
+                    authVM.errorMessage ?? 'Login failed',
+                  );
+                }
+              },
         borderRadius: BorderRadius.circular(30),
         child: Container(
           width: double.infinity,
@@ -242,14 +236,23 @@ class LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.circular(30),
           ),
           child: Center(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+            child: authVM.isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.black,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    text,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
           ),
         ),
       ),

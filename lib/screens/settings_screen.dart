@@ -30,8 +30,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       ? Colors.white
       : const Color(0xFF2C1A00);
   Color get _textMuted => Provider.of<CartProvider>(context).isDarkMode
-      ? Colors.white60
-      : const Color(0xFF8B6914);
+      ? Colors.white54
+      : const Color(0x992C1A00);
   Color get _cardWhite => Provider.of<CartProvider>(context).isDarkMode
       ? const Color(0xFF1E1E1E)
       : const Color(0xFFFFFFFF);

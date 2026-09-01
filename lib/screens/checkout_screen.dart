@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import '../helpers/toast_helper.dart';
 import '../providers/cart_provider.dart';
-import '../models/cart_item.dart';
+import '../viewmodels/order_viewmodel.dart';
+import '../viewmodels/address_viewmodel.dart';
+import '../viewmodels/payment_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
+import '../viewmodels/cart_viewmodel.dart';
 
 class CheckoutScreen extends StatefulWidget {
   static const String path = '/checkout';
@@ -30,62 +35,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   static const Color _luxuryBlack = Color(0xFF1E1E1E);
 
   // Address selection state
-  String _selectedAddressId = '1';
+  String _selectedAddressId = '';
 
   // Addresses mock data matching the luxury app theme
-  final List<Map<String, String>> _addresses = [
-    {
-      'id': '1',
-      'label': 'Home Address',
-      'name': 'Jane Doe',
-      'address':
-          '52 Ridgewood Drive, SW. Saxton St. North Fort Myers, Henrico, VA 23228',
-      'phone': '+91 9087654321',
-    },
-    {
-      'id': '2',
-      'label': 'Office Address',
-      'name': 'Jane Doe',
-      'address':
-          'Empire Tech Tower, Phase II, InfoPark, Kakkanad, Kochi, Kerala - 682030',
-      'phone': '+91 98765 43210',
-    },
-  ];
+  final List<Map<String, String>> _addresses = [];
 
   // Payment method selection state
   String _selectedPaymentMethod = 'card'; // card, paypal, bank, cod, gpay
 
   // Cards data with CRED style themes
-  final List<Map<String, String>> _savedCards = [
-    {
-      'id': '1',
-      'number': '4321 5820 9012 6789',
-      'expiry': '12/28',
-      'cvv': '123',
-      'holder': 'Jane Doe',
-      'brand': 'PLATINUM PRIME',
-      'theme': 'platinum',
-    },
-    {
-      'id': '2',
-      'number': '5123 7410 8520 4567',
-      'expiry': '08/30',
-      'cvv': '456',
-      'holder': 'Jane Doe',
-      'brand': 'EMERALD ROYAL',
-      'theme': 'emerald',
-    },
-    {
-      'id': '3',
-      'number': '6011 3698 1472 1234',
-      'expiry': '05/29',
-      'cvv': '789',
-      'holder': 'Jane Doe',
-      'brand': 'GOLD ELITE',
-      'theme': 'gold',
-    },
-  ];
-  String? _selectedCardId = '1';
+  final List<Map<String, String>> _savedCards = [];
+  String? _selectedCardId;
   final List<String> _cardThemes = ['platinum', 'emerald', 'gold'];
 
   // Card controllers
@@ -110,6 +70,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _cardExpiryMonthController.addListener(_onCardFieldChanged);
     _cardExpiryYearController.addListener(_onCardFieldChanged);
     _cardHolderController.addListener(_onCardFieldChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<AddressViewModel>(
+        context,
+        listen: false,
+      ).fetchAddresses(customerId);
+      Provider.of<PaymentViewModel>(
+        context,
+        listen: false,
+      ).fetchCards(customerId);
+    });
   }
 
   void _onCardFieldChanged() {
@@ -344,7 +317,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (nameCtrl.text.isEmpty ||
                               phoneCtrl.text.isEmpty ||
                               addrCtrl.text.isEmpty) {
@@ -356,31 +329,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             );
                             return;
                           }
-                          setState(() {
-                            if (isEditing) {
-                              final idx = _addresses.indexWhere(
-                                (a) => a['id'] == existingAddress['id'],
-                              );
-                              if (idx != -1) {
-                                _addresses[idx] = {
-                                  'id': existingAddress['id']!,
-                                  'label': selectedLabel,
-                                  'name': nameCtrl.text,
-                                  'address': addrCtrl.text,
-                                  'phone': phoneCtrl.text,
-                                };
-                              }
-                            } else {
-                              _addresses.add({
-                                'id': DateTime.now().millisecondsSinceEpoch
-                                    .toString(),
-                                'label': selectedLabel,
-                                'name': nameCtrl.text,
-                                'address': addrCtrl.text,
-                                'phone': phoneCtrl.text,
-                              });
-                            }
-                          });
+                          final customerId =
+                              Provider.of<AuthViewModel>(
+                                context,
+                                listen: false,
+                              ).currentUser?.id ??
+                              '1';
+                          final addressVM = Provider.of<AddressViewModel>(
+                            context,
+                            listen: false,
+                          );
+
+                          if (isEditing) {
+                            await addressVM.updateAddress(
+                              customerId: customerId,
+                              addressId: existingAddress['id']!,
+                              label: selectedLabel,
+                              name: nameCtrl.text,
+                              phone: phoneCtrl.text,
+                              address: addrCtrl.text,
+                            );
+                          } else {
+                            await addressVM.addAddress(
+                              customerId: customerId,
+                              label: selectedLabel,
+                              name: nameCtrl.text,
+                              phone: phoneCtrl.text,
+                              address: addrCtrl.text,
+                            );
+                          }
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -458,6 +435,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final cardWhite = isDark
         ? const Color(0xFF1E1E1E)
         : const Color(0xFFFFFFFF);
+    final addressVM = Provider.of<AddressViewModel>(context);
+    final paymentVM = Provider.of<PaymentViewModel>(context);
+
+    _addresses.clear();
+    _addresses.addAll(
+      addressVM.addresses.map(
+        (a) => {
+          'id': a.id,
+          'label': a.label,
+          'name': a.name,
+          'address': a.address,
+          'phone': a.phone,
+        },
+      ),
+    );
+    if (_selectedAddressId.isEmpty && _addresses.isNotEmpty) {
+      _selectedAddressId = _addresses.first['id'] ?? '';
+    }
+
+    _savedCards.clear();
+    _savedCards.addAll(
+      paymentVM.cards.map(
+        (c) => {
+          'id': c.id,
+          'number': c.number,
+          'expiry': c.expiry,
+          'cvv': '123',
+          'holder': c.holder,
+          'brand': c.brand,
+          'theme': 'platinum',
+        },
+      ),
+    );
+    if (_selectedCardId == null && _savedCards.isNotEmpty) {
+      _selectedCardId = _savedCards.first['id'];
+    }
+
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
 
     // Dynamic AppBar title based on steps
@@ -1698,21 +1712,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       final formattedExpiry =
                           '$monthText/${yearText.length == 4 ? yearText.substring(2) : yearText}';
 
+                      final customerId =
+                          Provider.of<AuthViewModel>(
+                            context,
+                            listen: false,
+                          ).currentUser?.id ??
+                          '1';
+                      final paymentVM = Provider.of<PaymentViewModel>(
+                        context,
+                        listen: false,
+                      );
+                      paymentVM.saveCard(
+                        customerId: customerId,
+                        number: _cardNumberController.text.trim(),
+                        expiryMonth: monthText,
+                        expiryYear: yearText,
+                        cvv: _cardCvvController.text.trim(),
+                        holder: _cardHolderController.text.trim(),
+                        brand: 'CARD ELITE',
+                        theme: 'platinum',
+                      );
                       setState(() {
-                        final assignedTheme =
-                            _cardThemes[_savedCards.length %
-                                _cardThemes.length];
-                        _savedCards.add({
-                          'id': DateTime.now().millisecondsSinceEpoch
-                              .toString(),
-                          'number': _cardNumberController.text,
-                          'expiry': formattedExpiry,
-                          'cvv': _cardCvvController.text,
-                          'holder': _cardHolderController.text,
-                          'brand': 'CARD ELITE',
-                          'theme': assignedTheme,
-                        });
-                        _selectedCardId = _savedCards.last['id'];
+                        if (paymentVM.cards.isNotEmpty) {
+                          _selectedCardId = paymentVM.cards.last.id;
+                        }
                         _paymentSubStep = 2; // Return to card list
                       });
                       _cardNumberController.clear();
@@ -2044,7 +2067,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isDark ? Colors.green.withOpacity(0.3) : Colors.green.shade200,
+                color: isDark
+                    ? Colors.green.withOpacity(0.3)
+                    : Colors.green.shade200,
                 width: 1.2,
               ),
               boxShadow: [
@@ -2081,7 +2106,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          color: isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -2090,7 +2117,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
-                          color: isDark ? Colors.lightGreen : Colors.green.shade900,
+                          color: isDark
+                              ? Colors.lightGreen
+                              : Colors.green.shade900,
                         ),
                       ),
                     ],
@@ -2099,9 +2128,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // 2. Horizontal scrolling Cart Items list
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2115,7 +2144,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: _goldAccent.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -2132,7 +2164,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          
+
           SizedBox(
             height: 140,
             child: ListView.builder(
@@ -2166,7 +2198,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               child: Center(
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Image.asset(item.imagePath, fit: BoxFit.contain),
+                                  child: Image.asset(
+                                    item.imagePath,
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
                               ),
                             ),
@@ -2198,7 +2233,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         top: 6,
                         right: 6,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 2,
+                          ),
                           decoration: const BoxDecoration(
                             color: _goldAccent,
                             shape: BoxShape.circle,
@@ -2219,9 +2257,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               },
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // 3. Envelope styled Delivery Address card
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2260,10 +2298,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: _goldAccent.withOpacity(0.2), width: 1),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 8,
-                )
+                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8),
               ],
             ),
             child: Stack(
@@ -2301,7 +2336,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             activeAddr?['address'] ?? '',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
-                              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                              color: isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600,
                               height: 1.4,
                             ),
                             maxLines: 2,
@@ -2325,7 +2362,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   top: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: _goldAccent.withOpacity(0.5)),
                       borderRadius: BorderRadius.circular(4),
@@ -2344,9 +2384,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // 4. Payment Method Card Summary
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2418,7 +2458,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                (activeCard['brand'] ?? 'PLATINUM').toUpperCase(),
+                                (activeCard['brand'] ?? 'PLATINUM')
+                                    .toUpperCase(),
                                 style: GoogleFonts.poppins(
                                   color: Colors.white70,
                                   fontSize: 8,
@@ -2446,7 +2487,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                (activeCard['holder'] ?? 'JANE DOE').toUpperCase(),
+                                (activeCard['holder'] ?? 'JANE DOE')
+                                    .toUpperCase(),
                                 style: GoogleFonts.poppins(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 10,
@@ -2496,9 +2538,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ],
               ),
             ),
-            
+
           const SizedBox(height: 28),
-          
+
           // 5. Coupon field
           Row(
             children: [
@@ -2549,25 +2591,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_couponController.text.trim().toUpperCase() ==
-                        _appliedCouponCode) {
+                  onPressed: () async {
+                    final code = _couponController.text.trim();
+                    if (code.isEmpty) return;
+
+                    final orderVM = Provider.of<OrderViewModel>(
+                      context,
+                      listen: false,
+                    );
+                    final customerId =
+                        Provider.of<AuthViewModel>(
+                          context,
+                          listen: false,
+                        ).currentUser?.id ??
+                        '1';
+                    final success = await orderVM.validateCoupon(
+                      customerId,
+                      code,
+                    );
+                    if (success) {
                       setState(() {
                         _isCouponApplied = true;
-                        _promoDiscount = 128.0;
+                        _promoDiscount = orderVM.couponDiscount;
                       });
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Coupon FREE100 applied successfully!"),
+                        SnackBar(
+                          content: Text(
+                            orderVM.couponMessage ??
+                                "Coupon applied successfully!",
+                          ),
                           backgroundColor: Colors.green,
                         ),
                       );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Invalid coupon. Try 'FREE100'"),
-                          backgroundColor: Colors.redAccent,
-                        ),
+                      setState(() {
+                        _isCouponApplied = false;
+                        _promoDiscount = 0.0;
+                      });
+                      ToastHelper.showErrorToast(
+                        context,
+                        orderVM.couponMessage ?? "Invalid coupon code",
                       );
                     }
                   },
@@ -2614,9 +2676,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 28),
-          
+
           // 6. Pricing invoice block
           Text(
             "Pricing Details",
@@ -2634,10 +2696,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: _goldMid.withAlpha(20), width: 1.2),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.01),
-                  blurRadius: 8,
-                ),
+                BoxShadow(color: Colors.black.withOpacity(0.01), blurRadius: 8),
               ],
             ),
             child: Column(
@@ -2661,7 +2720,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                _buildPriceBreakdownRow("Import charges", 128.0, isDark, textDark),
+                _buildPriceBreakdownRow(
+                  "Import charges",
+                  128.0,
+                  isDark,
+                  textDark,
+                ),
               ],
             ),
           ),
@@ -2874,115 +2938,116 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Future<void> _placeOrder(CartProvider cart) async {
-    final addr = _addresses.firstWhere((a) => a['id'] == _selectedAddressId, orElse: () => _addresses.first);
-    final addressText = addr['address'] ?? '';
-    final phoneText = addr['phone'] ?? '';
-    final cityText = addressText.toLowerCase().contains('kochi') || addressText.toLowerCase().contains('kakkanad') ? 'Kochi' : 'Calicut';
-
-    final res = await cart.checkout(
+  void _placeOrder(CartProvider cart) async {
+    final orderVM = Provider.of<OrderViewModel>(context, listen: false);
+    final customerId =
+        Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+        '1';
+    final success = await orderVM.placeOrder(
+      customerId: customerId,
+      addressId: _selectedAddressId,
       paymentMethod: _selectedPaymentMethod,
-      shippingAddress: addressText,
-      shippingCity: cityText,
-      shippingPhone: phoneText,
-      notes: "Handcrafted jewellery order.",
+      cardId: _selectedPaymentMethod == 'card' ? _selectedCardId : null,
+      couponCode: _isCouponApplied ? _couponController.text.trim() : null,
     );
 
-    if (mounted) {
-      if (res['status'] == 'success') {
-        final isDark = cart.isDarkMode;
-        final cardWhite = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-        final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
-
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            backgroundColor: cardWhite,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-            title: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _emeraldGreen.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle_rounded,
-                color: _emeraldGreen,
-                size: 80,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Order Placed!",
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: textDark,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  "Your handcrafted jewelry is being prepared with love and care.",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: isDark ? Colors.grey.shade400 : Colors.black54,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: const LinearGradient(
-                      colors: [_emeraldGreen, Color(0xFF1B382A)],
-                    ),
-                  ),
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: Text(
-                      "Back to Home",
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['message'] ?? "Checkout failed. Please try again."),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
+    if (!success) {
+      if (mounted) {
+        ToastHelper.showErrorToast(
+          context,
+          orderVM.errorMessage ?? "Failed to place order",
         );
       }
+      return;
     }
+
+    final isDark = cart.isDarkMode;
+    final cardWhite = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
+
+    Provider.of<CartViewModel>(context, listen: false).clearCart(customerId);
+    cart.clearCart();
+    cart.setTabIndex(0);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        title: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _emeraldGreen.withOpacity(0.08),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check_circle_rounded,
+            color: _emeraldGreen,
+            size: 80,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Order Placed!",
+              style: GoogleFonts.playfairDisplay(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: textDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Your handcrafted jewelry is being prepared with love and care.",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: isDark ? Colors.grey.shade400 : Colors.black54,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [_emeraldGreen, Color(0xFF1B382A)],
+                ),
+              ),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  "Back to Home",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

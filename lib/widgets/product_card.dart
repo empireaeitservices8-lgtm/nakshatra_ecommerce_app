@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nakshatra_app/models/cart_item.dart';
 import 'package:provider/provider.dart';
-import '../providers/cart_provider.dart';
-import '../models/cart_item.dart';
+import '../viewmodels/cart_viewmodel.dart';
+import '../viewmodels/wishlist_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import '../models/product.dart';
+import '../widgets/animated_add_to_cart_button.dart';
+import '../helpers/cart_animation_helper.dart';
+import '../screens/product_detail_screen.dart';
+import '../constants/app_colors.dart';
 
 class ProductCard extends StatefulWidget {
   final String id, title, subtitle, price, imagePath;
+  final bool inStock;
   const ProductCard({
     super.key,
     required this.id,
@@ -14,6 +21,7 @@ class ProductCard extends StatefulWidget {
     required this.subtitle,
     required this.price,
     required this.imagePath,
+    this.inStock = true,
   });
 
   @override
@@ -21,24 +29,77 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
-  bool isWishlisted = false;
-
-  Widget _buildImage(String path, {BoxFit fit = BoxFit.cover}) {
-    if (path.startsWith('http')) {
+  final GlobalKey _imageKey = GlobalKey();
+  Widget _buildImage(
+    String path, {
+    Key? key,
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.cover,
+  }) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
         path,
+        key: key,
+        width: width,
+        height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          return Image.asset('assets/images/product1.png', fit: fit);
-        },
+        errorBuilder: (context, error, stackTrace) => Image.asset(
+          _getFallbackAsset(widget.title, widget.subtitle),
+          width: width,
+          height: height,
+          fit: fit,
+        ),
       );
     } else {
-      return Image.asset(path, fit: fit);
+      return Image.asset(
+        path,
+        key: key,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => Image.asset(
+          _getFallbackAsset(widget.title, widget.subtitle),
+          width: width,
+          height: height,
+          fit: fit,
+        ),
+      );
     }
   }
 
+  String _getFallbackAsset(String title, String subtitle) {
+    final lowerTitle = title.toLowerCase();
+    final lowerSubtitle = subtitle.toLowerCase();
+
+    if (lowerTitle.contains('necklace') ||
+        lowerSubtitle.contains('necklace') ||
+        lowerTitle.contains('chain') ||
+        lowerSubtitle.contains('chain')) {
+      return 'assets/images/necklace2.png';
+    } else if (lowerTitle.contains('earring') ||
+        lowerSubtitle.contains('earring') ||
+        lowerTitle.contains('stud') ||
+        lowerSubtitle.contains('stud')) {
+      return 'assets/images/earring.png';
+    } else if (lowerTitle.contains('ring') || lowerSubtitle.contains('ring')) {
+      return 'assets/images/ring.png';
+    } else if (lowerTitle.contains('bangle') ||
+        lowerTitle.contains('bracelet') ||
+        lowerSubtitle.contains('bangle') ||
+        lowerSubtitle.contains('bracelet') ||
+        lowerTitle.contains('kada')) {
+      return 'assets/images/bracelet.png';
+    }
+
+    return 'assets/images/necklace2.png';
+  }
+
   void _showProductDetails(BuildContext context) {
-    final isDark = Provider.of<CartProvider>(context, listen: false).isDarkMode;
+    final isDark = Provider.of<CartViewModel>(
+      context,
+      listen: false,
+    ).isDarkMode;
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
     final textMuted = isDark ? Colors.white70 : Colors.black54;
 
@@ -144,37 +205,78 @@ class _ProductCardState extends State<ProductCard> {
               ),
               const SizedBox(height: 25),
               ElevatedButton(
-                onPressed: () {
-                  Provider.of<CartProvider>(context, listen: false).addToCart(
-                    CartItem(
-                      id: widget.id,
-                      title: widget.title,
-                      price: widget.price,
-                      imagePath: widget.imagePath,
-                    ),
+                onPressed: () async {
+                  if (!widget.inStock) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text("There is no stock available."),
+                        backgroundColor: Colors.red.shade800,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  final cartVM = Provider.of<CartViewModel>(
+                    context,
+                    listen: false,
+                  );
+                  final authVM = Provider.of<AuthViewModel>(
+                    context,
+                    listen: false,
+                  );
+                  final customerId = authVM.currentUser?.id ?? '1';
+                  final product = Product(
+                    id: widget.id,
+                    title: widget.title,
+                    subtitle: widget.subtitle,
+                    price: widget.price,
+                    imagePath: widget.imagePath,
+                    category: '',
+                    gender: '',
+                  );
+                  final success = await cartVM.addToCart(
+                    customerId,
+                    widget.id,
+                    product: product,
                   );
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Added ${widget.title} to Bag!"),
-                      backgroundColor: const Color(0xFF2E513D),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Added ${widget.title} to Bag!"),
+                        backgroundColor: const Color(0xFF2E513D),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        duration: const Duration(seconds: 1),
                       ),
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(cartVM.errorMessage ?? "Failed to add item to Bag"),
+                        backgroundColor: Colors.red.shade800,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E513D),
+                  backgroundColor: !widget.inStock ? Colors.grey : const Color(0xFF2E513D),
                   minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
                 ),
                 child: Text(
-                  "Add to Bag",
+                  widget.inStock ? "Add to Bag" : "Out of Stock",
                   style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -190,6 +292,8 @@ class _ProductCardState extends State<ProductCard> {
     );
   }
 
+  double _scale = 1.0;
+
   @override
   Widget build(BuildContext context) {
     // Parse prices
@@ -199,299 +303,260 @@ class _ProductCardState extends State<ProductCard> {
     double originalVal = priceVal / 0.8; // 20% off
     String originalPrice = '₹${originalVal.toStringAsFixed(2)}';
 
-    final isDark = Provider.of<CartProvider>(context).isDarkMode;
+    final cartVM = Provider.of<CartViewModel>(context);
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final customerId = authVM.currentUser?.id ?? '1';
+    final isDark = cartVM.isDarkMode;
     final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
     final borderCol = isDark ? Colors.white12 : Colors.grey.shade200;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: borderCol, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    final cartItem = cartVM.items.firstWhere(
+      (item) => item.productId == widget.id,
+      orElse: () =>
+          CartItem(id: '', productId: '', title: '', price: '', imagePath: ''),
+    );
+    final cartQty = cartItem.id.isNotEmpty ? cartItem.quantity : 0;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.96),
+      onTapUp: (_) => setState(() => _scale = 1.0),
+      onTapCancel: () => setState(() => _scale = 1.0),
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          ProductDetailScreen.path,
+          arguments: {
+            'productId': widget.id,
+            'initialTitle': widget.title,
+            'initialPrice': widget.price,
+            'initialImagePath': widget.imagePath,
+            'heroTag': 'product_card_${widget.id}',
+          },
+        );
+      },
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: borderCol, width: 1.0),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Rounded Image Container
-            Container(
-              height: 120,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF2C2C2C)
-                    : const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: double.infinity,
-                      child: _buildImage(widget.imagePath, fit: BoxFit.cover),
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Rounded Image Container
+                Container(
+                  height: 120,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF2C2C2C)
+                        : const Color(0xFFF6F5F8),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  // Wishlist Button (Top Right of image container)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Consumer<CartProvider>(
-                      builder: (context, cartProvider, child) {
-                        final isWish = cartProvider.isProductWishlisted(widget.id);
-                        return GestureDetector(
-                          onTap: () async {
-                            if (!cartProvider.isLoggedIn) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Please login to wishlist items"),
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                              return;
-                            }
-                            await cartProvider.toggleWishlist(Product(
-                              id: widget.id,
-                              title: widget.title,
-                              subtitle: widget.subtitle,
-                              price: widget.price,
-                              imagePath: widget.imagePath,
-                              category: '',
-                              gender: '',
-                            ));
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(isWish
-                                      ? "Removed from Wishlist"
-                                      : "Added to Wishlist"),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: cardBg,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isWish ? Icons.favorite : Icons.favorite_border,
-                              color: isWish
-                                  ? const Color(0xFFD4AF37)
-                                  : (isDark ? Colors.white70 : Colors.black54),
-                              size: 15,
-                            ),
+                  child: Stack(
+                    children: [
+                      Hero(
+                        tag: 'product_card_${widget.id}',
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: _buildImage(
+                            widget.imagePath,
+                            key: _imageKey,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Product Title
-            Text(
-              widget.title,
-              style: GoogleFonts.poppins(
-                color: textDark,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            // Description
-            Text(
-              "Certified 22K Nakshathra Hallmark gold item.",
-              style: GoogleFonts.poppins(
-                color: isDark ? Colors.white70 : Colors.grey.shade600,
-                fontSize: 10,
-                height: 1.2,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            // Stars rating row
-            Row(
-              children: [
-                ...List.generate(
-                  5,
-                  (index) => const Icon(
-                    Icons.star,
-                    color: Color(0xFFFFD700),
-                    size: 11,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  "4.8",
-                  style: GoogleFonts.poppins(
-                    color: isDark ? Colors.white70 : Colors.grey.shade600,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Price row (Current Price, Original Price, Discount) - scaled down if needed to prevent overflows
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Row(
-                children: [
-                  Text(
-                    widget.price,
-                    style: GoogleFonts.poppins(
-                      color: textDark,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    originalPrice,
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey.shade400,
-                      fontSize: 10,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white24
-                          : const Color(0xFF2C2C2E), // Dark grey
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Text(
-                      "-20%",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
+                      // Wishlist Button (Top Right of image container)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Consumer<WishlistViewModel>(
+                          builder: (context, wishlistVM, _) {
+                            final favorited = wishlistVM.isWishlisted(widget.id);
+                            return GestureDetector(
+                              onTap: () async {
+                                final customerId =
+                                    Provider.of<AuthViewModel>(
+                                      context,
+                                      listen: false,
+                                    ).currentUser?.id ??
+                                    '1';
+                                if (favorited) {
+                                  await wishlistVM.removeFromWishlist(
+                                    customerId,
+                                    widget.id,
+                                  );
+                                } else {
+                                  await wishlistVM.addToWishlist(
+                                    customerId,
+                                    Product(
+                                      id: widget.id,
+                                      title: widget.title,
+                                      subtitle: widget.subtitle,
+                                      price: widget.price,
+                                      imagePath: widget.imagePath,
+                                      category: '',
+                                      gender: '',
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: cardBg,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  favorited
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: favorited
+                                      ? const Color(0xFF8A2BE2)
+                                      : (isDark
+                                            ? Colors.white70
+                                            : Colors.black54),
+                                  size: 14,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Actions buttons row (Add to Cart / Quick View)
-            Row(
-              children: [
-                // Add to Cart button (Black background)
-                Expanded(
-                  child: SizedBox(
-                    height: 28,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Provider.of<CartProvider>(
-                          context,
-                          listen: false,
-                        ).addToCart(
-                          CartItem(
+                ),
+                const SizedBox(height: 8),
+                // Bottom content block (inspired by demo screenshot)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF262626) : const Color(0xFFF6F5F8),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: GoogleFonts.poppins(
+                                color: textDark,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              widget.price,
+                              style: GoogleFonts.poppins(
+                                color: isDark ? goldAccent : const Color(0xFF8A2BE2),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      // Floating circular cart action button
+                      GestureDetector(
+                        onTap: () async {
+                          if (!widget.inStock) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text("There is no stock available."),
+                                backgroundColor: Colors.red.shade800,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          CartAnimationHelper.runAddToCartAnimation(
+                            context: context,
+                            imageKey: _imageKey,
+                            imagePath: widget.imagePath,
+                          );
+                          final product = Product(
                             id: widget.id,
                             title: widget.title,
+                            subtitle: widget.subtitle,
                             price: widget.price,
                             imagePath: widget.imagePath,
+                            category: '',
+                            gender: '',
+                          );
+                           final success = await cartVM.addToCart(
+                             customerId,
+                             widget.id,
+                             product: product,
+                           );
+                           if (!success && context.mounted) {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               SnackBar(
+                                 content: Text(cartVM.errorMessage ?? "Failed to add item to Bag"),
+                                 backgroundColor: Colors.red.shade800,
+                                 behavior: SnackBarBehavior.floating,
+                                 shape: RoundedRectangleBorder(
+                                   borderRadius: BorderRadius.circular(10),
+                                 ),
+                               ),
+                             );
+                           }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: !widget.inStock
+                                ? Colors.grey.shade400
+                                : (cartQty > 0 ? const Color(0xFF2E513D) : const Color(0xFF8A2BE2)),
+                            shape: BoxShape.circle,
                           ),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Added ${widget.title} to Bag!"),
-                            backgroundColor: const Color(0xFF2E513D),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2C2C2E),
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.zero,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                      child: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4.0),
-                          child: Text(
-                            "Add to Cart",
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // Quick View button (White background with grey border)
-                Expanded(
-                  child: SizedBox(
-                    height: 28,
-                    child: OutlinedButton(
-                      onPressed: () => _showProductDetails(context),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: isDark ? Colors.white24 : Colors.grey.shade300,
-                          width: 1.0,
-                        ),
-                        foregroundColor: textDark,
-                        padding: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                      ),
-                      child: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4.0),
-                          child: Text(
-                            "Quick View",
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Icon(
+                            cartQty > 0 ? Icons.check_rounded : Icons.shopping_cart_outlined,
+                            color: Colors.white,
+                            size: 14,
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

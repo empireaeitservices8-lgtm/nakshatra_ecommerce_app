@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../helpers/toast_helper.dart';
 
 import '../providers/cart_provider.dart';
+import '../viewmodels/address_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
+import '../models/address.dart';
 
 class SavedAddressesScreen extends StatefulWidget {
   static const String path = '/saved-addresses';
@@ -27,29 +31,19 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
       ? Colors.white
       : const Color(0xFF2C1A00);
 
-  final List<Map<String, String>> _addresses = [
-    {
-      'id': '1',
-      'label': 'Home',
-      'name': 'Sarah Williams',
-      'phone': '+91 98765 43210',
-      'address':
-          'Flat 402, Nakshathra Residency, MG Road, Kochi, Kerala - 682011',
-    },
-    {
-      'id': '2',
-      'label': 'Work',
-      'name': 'Sarah Williams',
-      'phone': '+91 98765 43210',
-      'address':
-          'Empire Tech Tower, Phase II, InfoPark, Kakkanad, Kochi, Kerala - 682030',
-    },
-  ];
-
-  void _deleteAddress(String id) {
-    setState(() {
-      _addresses.removeWhere((addr) => addr['id'] == id);
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
+      Provider.of<AddressViewModel>(context, listen: false).fetchAddresses(customerId);
     });
+  }
+
+  void _deleteAddress(String id) async {
+    final addressVM = Provider.of<AddressViewModel>(context, listen: false);
+    final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
+    await addressVM.deleteAddress(customerId, id);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Address deleted successfully"),
@@ -59,19 +53,19 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
     );
   }
 
-  void _showAddressForm({Map<String, String>? existingAddress}) {
+  void _showAddressForm({Address? existingAddress}) {
     final isEditing = existingAddress != null;
     final nameCtrl = TextEditingController(
-      text: isEditing ? existingAddress['name'] : '',
+      text: isEditing ? existingAddress.name : '',
     );
     final phoneCtrl = TextEditingController(
-      text: isEditing ? existingAddress['phone'] : '',
+      text: isEditing ? existingAddress.phone : '',
     );
     final addrCtrl = TextEditingController(
-      text: isEditing ? existingAddress['address'] : '',
+      text: isEditing ? existingAddress.address : '',
     );
     String selectedLabel = isEditing
-        ? (existingAddress['label'] ?? 'Home')
+        ? (existingAddress.label.isNotEmpty ? existingAddress.label : 'Home')
         : 'Home';
 
     showModalBottomSheet(
@@ -81,6 +75,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final addressVM = Provider.of<AddressViewModel>(context);
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -101,14 +96,13 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                       child: Container(
                         width: 40,
                         height: 4,
-                        margin: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 20),
                     Text(
                       isEditing ? "Edit Address" : "Add New Address",
                       style: GoogleFonts.playfairDisplay(
@@ -118,134 +112,133 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Label Selector
                     Row(
                       children: ['Home', 'Work', 'Other'].map((label) {
                         final isSelected = selectedLabel == label;
-                        return GestureDetector(
-                          onTap: () {
-                            setModalState(() {
-                              selectedLabel = label;
-                            });
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 12),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected ? _emeraldGreen : _cardWhite,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? _emeraldGreen
-                                    : Colors.grey.shade300,
-                              ),
-                            ),
-                            child: Text(
-                              label,
-                              style: GoogleFonts.poppins(
-                                color: isSelected
-                                    ? Colors.white
-                                    : (Provider.of<CartProvider>(
-                                            context,
-                                            listen: false,
-                                          ).isDarkMode
-                                          ? Colors.white70
-                                          : Colors.black54),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: ChoiceChip(
+                            label: Text(label),
+                            selected: isSelected,
+                            onSelected: (val) {
+                              if (val) {
+                                setModalState(() {
+                                  selectedLabel = label;
+                                });
+                              }
+                            },
+                            selectedColor: _emeraldGreen,
+                            backgroundColor: _bgCream,
+                            labelStyle: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected ? Colors.white : _textDark,
                             ),
                           ),
                         );
                       }).toList(),
                     ),
                     const SizedBox(height: 20),
-                    _addressTextField(
+                    _buildTextField(
                       controller: nameCtrl,
                       label: "Recipient Name",
-                      icon: Icons.person_outline,
+                      icon: Icons.person_outline_rounded,
                     ),
-                    const SizedBox(height: 16),
-                    _addressTextField(
+                    const SizedBox(height: 15),
+                    _buildTextField(
                       controller: phoneCtrl,
                       label: "Phone Number",
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
                     ),
-                    const SizedBox(height: 16),
-                    _addressTextField(
+                    SizedBox(height: 15),
+                    _buildTextField(
                       controller: addrCtrl,
-                      label: "Full Address details",
+                      label: "Complete Address",
                       icon: Icons.location_on_outlined,
                       maxLines: 3,
                     ),
                     const SizedBox(height: 25),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (nameCtrl.text.isEmpty ||
-                            phoneCtrl.text.isEmpty ||
-                            addrCtrl.text.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please fill all fields"),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                          return;
-                        }
-                        setState(() {
-                          if (isEditing) {
-                            final idx = _addresses.indexWhere(
-                              (a) => a['id'] == existingAddress['id'],
-                            );
-                            _addresses[idx] = {
-                              'id': existingAddress['id']!,
-                              'label': selectedLabel,
-                              'name': nameCtrl.text,
-                              'phone': phoneCtrl.text,
-                              'address': addrCtrl.text,
-                            };
-                          } else {
-                            _addresses.add({
-                              'id': DateTime.now().millisecondsSinceEpoch
-                                  .toString(),
-                              'label': selectedLabel,
-                              'name': nameCtrl.text,
-                              'phone': phoneCtrl.text,
-                              'address': addrCtrl.text,
-                            });
-                          }
-                        });
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              isEditing
-                                  ? "Address updated"
-                                  : "Address added successfully",
-                            ),
-                            backgroundColor: _emeraldGreen,
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: addressVM.isLoading
+                            ? null
+                            : () async {
+                                final name = nameCtrl.text.trim();
+                                final phone = phoneCtrl.text.trim();
+                                final address = addrCtrl.text.trim();
+
+                                if (name.isEmpty ||
+                                    phone.isEmpty ||
+                                    address.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("All fields are required"),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
+                                final bool success;
+                                if (isEditing) {
+                                  success = await addressVM.updateAddress(
+                                    customerId: customerId,
+                                    addressId: existingAddress.id,
+                                    label: selectedLabel,
+                                    name: name,
+                                    phone: phone,
+                                    address: address,
+                                  );
+                                } else {
+                                  success = await addressVM.addAddress(
+                                    customerId: customerId,
+                                    label: selectedLabel,
+                                    name: name,
+                                    phone: phone,
+                                    address: address,
+                                  );
+                                }
+
+                                if (success) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        isEditing
+                                            ? "Address updated successfully"
+                                            : "Address saved successfully",
+                                      ),
+                                      backgroundColor: _emeraldGreen,
+                                    ),
+                                  );
+                                } else {
+                                  ToastHelper.showErrorToast(
+                                    context,
+                                    addressVM.errorMessage ?? "Operation failed",
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _emeraldGreen,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _emeraldGreen,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
                         ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        isEditing ? "Update Address" : "Save Address",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                        child: addressVM.isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : Text(
+                                isEditing ? "Save Address" : "Save Address",
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -258,28 +251,29 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
     );
   }
 
-  Widget _addressTextField({
+  Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    int maxLines = 1,
     TextInputType? keyboardType,
+    int maxLines = 1,
   }) {
     return TextField(
       controller: controller,
-      maxLines: maxLines,
       keyboardType: keyboardType,
-      style: GoogleFonts.poppins(color: _textDark, fontSize: 13),
+      maxLines: maxLines,
+      style: TextStyle(color: _textDark, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: GoogleFonts.poppins(
-          color: Colors.grey.shade500,
-          fontSize: 12,
+        labelStyle: TextStyle(
+          color: Provider.of<CartProvider>(context).isDarkMode
+              ? Colors.white70
+              : Colors.black54,
         ),
-        prefixIcon: Icon(icon, color: _goldDark, size: 20),
+        prefixIcon: Icon(icon, color: _goldDark),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: _goldMid.withAlpha(30)),
+          borderSide: BorderSide(color: _goldMid.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -293,6 +287,8 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final addressVM = Provider.of<AddressViewModel>(context);
+
     return Scaffold(
       backgroundColor: _bgCream,
       appBar: AppBar(
@@ -316,7 +312,9 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
           child: Container(color: _goldMid.withAlpha(30), height: 1),
         ),
       ),
-      body: _addresses.isEmpty
+      body: addressVM.isLoading && addressVM.addresses.isEmpty
+          ? const Center(child: CircularProgressIndicator(color: _goldMid))
+          : addressVM.addresses.isEmpty
           ? Center(
               child: Text(
                 "No saved addresses yet.",
@@ -326,9 +324,9 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
           : ListView.builder(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.all(20),
-              itemCount: _addresses.length,
+              itemCount: addressVM.addresses.length,
               itemBuilder: (context, index) {
-                final addr = _addresses[index];
+                final addr = addressVM.addresses[index];
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(16),
@@ -363,7 +361,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              addr['label'] ?? 'Home',
+                              addr.label.isNotEmpty ? addr.label : 'Home',
                               style: GoogleFonts.poppins(
                                 color: _emeraldGreen,
                                 fontSize: 11,
@@ -391,7 +389,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                                   color: Colors.redAccent,
                                   size: 20,
                                 ),
-                                onPressed: () => _deleteAddress(addr['id']!),
+                                onPressed: () => _deleteAddress(addr.id),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                               ),
@@ -401,7 +399,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        addr['name'] ?? '',
+                        addr.name,
                         style: GoogleFonts.poppins(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -410,7 +408,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        addr['address'] ?? '',
+                        addr.address,
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -419,7 +417,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Phone: ${addr['phone']}",
+                        "Phone: ${addr.phone}",
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey.shade500,

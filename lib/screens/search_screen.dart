@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
 import '../constants/app_colors.dart';
+import '../viewmodels/product_viewmodel.dart';
+import '../widgets/animated_cart_badge.dart';
+import '../helpers/cart_animation_helper.dart';
+import '../viewmodels/cart_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import 'cart_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   static const String path = '/search';
   final List<Map<String, String>> allProducts;
   final String? initialQuery;
-  const SearchScreen({super.key, required this.allProducts, this.initialQuery});
+  final String? categoryId;
+
+  const SearchScreen({
+    super.key,
+    required this.allProducts,
+    this.initialQuery,
+    this.categoryId,
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -27,8 +40,8 @@ class _SearchScreenState extends State<SearchScreen>
       ? Colors.white
       : const Color(0xFF2C1A00);
   Color get _textMuted => Provider.of<CartProvider>(context).isDarkMode
-      ? Colors.white60
-      : const Color(0xFF8B6914);
+      ? Colors.white54
+      : const Color(0x992C1A00);
 
   final TextEditingController _searchCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -64,9 +77,22 @@ class _SearchScreenState extends State<SearchScreen>
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _animCtrl.forward();
 
-    if (widget.initialQuery != null) {
+    if (widget.categoryId != null) {
+      if (widget.initialQuery != null) {
+        _searchCtrl.text = widget.initialQuery!;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _fetchCategoryProducts(widget.categoryId!);
+        }
+      });
+    } else if (widget.initialQuery != null) {
       _searchCtrl.text = widget.initialQuery!;
-      _onSearch(widget.initialQuery!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _onSearch(widget.initialQuery!);
+        }
+      });
     } else {
       // Auto-focus keyboard only if no initial query is provided
       WidgetsBinding.instance.addPostFrameCallback(
@@ -75,15 +101,57 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
+  void _fetchCategoryProducts(String categoryId) async {
+    final catIdInt = int.tryParse(categoryId);
+    if (catIdInt == null) return;
+
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final customerId = authVM.currentUser?.id ?? '1';
+
+    final productVM = Provider.of<ProductViewModel>(context, listen: false);
+    await productVM.fetchCategoryProducts(
+      categoryId: catIdInt,
+      customerId: customerId,
+    );
+
+    if (mounted) {
+      setState(() {
+        _hasSearched = true;
+        if (productVM.categoryProducts.isNotEmpty) {
+          _results = productVM.categoryProducts.map((p) => {
+            'id': p.id,
+            'title': p.title,
+            'subtitle': p.subtitle,
+            'price': p.price,
+            'imagePath': p.imagePath,
+            'inStock': p.inStock ? 'true' : 'false',
+          }).toList();
+        } else {
+          _results = [];
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _searchCtrl.dispose();
     _focusNode.dispose();
     _animCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  void _onSearch(String query) {
+  Timer? _debounce;
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _onSearch(query);
+    });
+  }
+
+  void _onSearch(String query) async {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) {
       setState(() {
@@ -92,24 +160,27 @@ class _SearchScreenState extends State<SearchScreen>
       });
       return;
     }
-    setState(() {
-      _hasSearched = true;
-      _results = widget.allProducts.where((p) {
-        final title = p['title']?.toLowerCase() ?? '';
-        final subtitle = p['subtitle']?.toLowerCase() ?? '';
-        final category = p['category']?.toLowerCase() ?? '';
-        final gender = p['gender']?.toLowerCase() ?? '';
 
-        final words = q.split(' ');
-        return words.every(
-          (word) =>
-              title.contains(word) ||
-              subtitle.contains(word) ||
-              category.contains(word) ||
-              gender.contains(word),
-        );
-      }).toList();
-    });
+    final productVM = Provider.of<ProductViewModel>(context, listen: false);
+    await productVM.searchProducts(q);
+
+    if (mounted) {
+      setState(() {
+        _hasSearched = true;
+        if (productVM.searchResults.isNotEmpty) {
+          _results = productVM.searchResults.map((p) => {
+            'id': p.id,
+            'title': p.title,
+            'subtitle': p.subtitle,
+            'price': p.price,
+            'imagePath': p.imagePath,
+            'inStock': p.inStock ? 'true' : 'false',
+          }).toList();
+        } else {
+          _results = [];
+        }
+      });
+    }
   }
 
   @override
@@ -162,7 +233,7 @@ class _SearchScreenState extends State<SearchScreen>
                         child: TextField(
                           controller: _searchCtrl,
                           focusNode: _focusNode,
-                          onChanged: _onSearch,
+                          onChanged: _onSearchChanged,
                           onSubmitted: _onSearch,
                           style: TextStyle(color: _textDark, fontSize: 14),
                           decoration: InputDecoration(
@@ -393,6 +464,7 @@ class _SearchScreenState extends State<SearchScreen>
                 subtitle: p['subtitle']!,
                 price: p['price']!,
                 imagePath: p['imagePath']!,
+                inStock: p['inStock'] != 'false',
               );
             },
           ),
@@ -402,11 +474,12 @@ class _SearchScreenState extends State<SearchScreen>
   }
 
   Widget _buildCartIconWithBadge(BuildContext context) {
-    return Consumer<CartProvider>(
-      builder: (context, cart, child) => Stack(
+    return Consumer<CartViewModel>(
+      builder: (context, cartVM, child) => Stack(
         clipBehavior: Clip.none,
         children: [
           GestureDetector(
+            key: CartAnimationHelper.searchCartKey,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CartScreen()),
@@ -425,7 +498,7 @@ class _SearchScreenState extends State<SearchScreen>
                 ],
               ),
               child: Icon(
-                Icons.shopping_cart_outlined,
+                Icons.shopping_bag_outlined,
                 color: Provider.of<CartProvider>(context).isDarkMode
                     ? Colors.white
                     : Colors.black87,
@@ -433,28 +506,11 @@ class _SearchScreenState extends State<SearchScreen>
               ),
             ),
           ),
-          if (cart.items.isNotEmpty)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text(
-                  '${cart.items.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
+          Positioned(
+            right: -2,
+            top: -2,
+            child: AnimatedCartBadge(count: cartVM.items.length),
+          ),
         ],
       ),
     );

@@ -5,8 +5,10 @@ import 'refer_earn_screen.dart';
 import 'saved_addresses_screen.dart';
 import 'wishlist_screen.dart';
 import 'package:provider/provider.dart';
+import '../helpers/toast_helper.dart';
 
 import '../providers/cart_provider.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import 'my_orders_screen.dart';
 import 'my_reviews_screen.dart';
 
@@ -36,8 +38,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       ? Colors.white
       : const Color(0xFF2C1A00);
   Color get _textMuted => Provider.of<CartProvider>(context).isDarkMode
-      ? Colors.white60
-      : const Color(0xFF8B6914);
+      ? Colors.white54
+      : const Color(0x992C1A00);
   Color get _cardWhite => Provider.of<CartProvider>(context).isDarkMode
       ? const Color(0xFF1E1E1E)
       : const Color(0xFFFFFFFF);
@@ -79,6 +81,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       'subtitle': 'Get ₹500 per referral',
       'icon': Icons.card_giftcard_outlined,
     },
+    {
+      'title': 'Gold Scheme',
+      'subtitle': 'Manage your gold savings plan',
+      'icon': Icons.savings_outlined,
+    },
+    {
+      'title': 'Settings',
+      'subtitle': 'Notifications, theme, password',
+      'icon': Icons.settings_outlined,
+    },
   ];
 
   @override
@@ -94,6 +106,17 @@ class _ProfileScreenState extends State<ProfileScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
     _animController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final authVM = Provider.of<AuthViewModel>(context, listen: false);
+      await authVM.loadProfile();
+      if (mounted && authVM.errorMessage != null) {
+        ToastHelper.showErrorToast(
+          context,
+          "Profile API Error: ${authVM.errorMessage}",
+        );
+      }
+    });
   }
 
   @override
@@ -133,6 +156,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ── Sliver AppBar with forest green gradient ──────────────────────────────
   Widget _buildSliverAppBar(BuildContext context) {
+    final authVM = Provider.of<AuthViewModel>(context);
+    final user = authVM.currentUser;
+    final name = user?.name.isNotEmpty == true ? user!.name : 'Sarah Williams';
+    final email = user?.email.isNotEmpty == true ? user!.email : 'sarah.w@jewels.com';
+
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
@@ -203,7 +231,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Sarah Williams',
+                        name,
                         style: GoogleFonts.playfairDisplay(
                           color: Colors.white,
                           fontSize: 22,
@@ -213,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'sarah.w@jewels.com',
+                        email,
                         style: GoogleFonts.poppins(
                           color: Colors.white.withOpacity(0.80),
                           fontSize: 12.5,
@@ -239,12 +267,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                             color: const Color(0xFFD4AF37).withOpacity(0.5),
                             width: 1,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                            ),
-                          ],
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -356,11 +378,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       children: [
         _menuHeader("MY ACCOUNT"),
         const SizedBox(height: 8),
-        _buildMenuCard([0, 1, 2, 3]),
+        _buildMenuCard([0, 1, 2, 3, 7]),
         const SizedBox(height: 24),
         _menuHeader("REWARDS & COMMUNITY"),
         const SizedBox(height: 8),
-        _buildMenuCard([4, 5]),
+        _buildMenuCard([4, 5, 6]),
         const SizedBox(height: 30),
         _buildLogoutButton(),
       ],
@@ -501,6 +523,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           builder: (_) => const ReferEarnScreen(),
                         ),
                       );
+                    } else if (item['title'] == 'Gold Scheme') {
+                      Navigator.pushNamed(context, '/gold_scheme');
+                    } else if (item['title'] == 'Settings') {
+                      Navigator.pushNamed(context, '/settings');
                     }
                   },
                 ),
@@ -520,6 +546,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildLogoutButton() {
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: OutlinedButton.icon(
@@ -556,6 +583,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                   onPressed: () {
+                    authVM.logout();
                     Navigator.pop(context);
                     Navigator.pushNamedAndRemoveUntil(
                       context,
@@ -601,8 +629,10 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // ── Edit Profile Bottom Sheet ─────────────────────────────────────────────
   void _showEditProfileSheet(BuildContext context) {
-    final nameCtrl = TextEditingController(text: 'Sarah Williams');
-    final phoneCtrl = TextEditingController(text: '+91 98765 43210');
+    final authVM = Provider.of<AuthViewModel>(context, listen: false);
+    final user = authVM.currentUser;
+    final nameCtrl = TextEditingController(text: user?.name ?? 'Sarah Williams');
+    final emailCtrl = TextEditingController(text: user?.email ?? 'sarah.w@jewels.com');
 
     showModalBottomSheet(
       context: context,
@@ -649,10 +679,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               const SizedBox(height: 16),
               _goldTextField(
-                controller: phoneCtrl,
-                label: 'Phone Number',
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
+                controller: emailCtrl,
+                label: 'Email Address',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 28),
               SizedBox(
@@ -667,7 +697,24 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     elevation: 0,
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () async {
+                    final name = nameCtrl.text.trim();
+                    final email = emailCtrl.text.trim();
+                    if (name.isNotEmpty && email.isNotEmpty) {
+                      final success = await authVM.updateProfile(name: name, email: email);
+                      if (success) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Profile updated successfully!')),
+                        );
+                      } else {
+                        ToastHelper.showErrorToast(
+                          context,
+                          authVM.errorMessage ?? 'Update failed',
+                        );
+                      }
+                    }
+                  },
                   child: const Text(
                     'Save Changes',
                     style: TextStyle(

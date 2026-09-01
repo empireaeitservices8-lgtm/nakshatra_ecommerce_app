@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
-import '../constants/app_products.dart';
+import '../viewmodels/product_viewmodel.dart';
+import '../models/product.dart';
 import '../constants/app_colors.dart';
-import '../screens/search_screen.dart';
+import '../screens/latest_models_screen.dart';
 import 'latest_model_card.dart';
 
 class LatestModelsShowcase extends StatelessWidget {
@@ -12,10 +13,12 @@ class LatestModelsShowcase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final latestItems = allProducts.where((p) {
-      final id = p['id'];
-      return id == '5' || id == '6' || id == '7' || id == '8' || id == '11';
-    }).toList();
+    final productVM = Provider.of<ProductViewModel>(context);
+    final latestItems = productVM.latestProducts;
+
+    if (latestItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,18 +52,7 @@ class LatestModelsShowcase extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => SearchScreen(
-                      allProducts: allProducts,
-                      initialQuery: "",
-                    ),
-                    transitionsBuilder: (_, anim, __, child) =>
-                        FadeTransition(opacity: anim, child: child),
-                    transitionDuration: const Duration(milliseconds: 250),
-                  ),
-                );
+                Navigator.pushNamed(context, LatestModelsScreen.path);
               },
               child: Text(
                 "See all",
@@ -83,11 +75,12 @@ class LatestModelsShowcase extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 15),
                 child: LatestModelCard(
-                  id: product['id']!,
-                  title: product['title']!,
-                  subtitle: product['subtitle']!,
-                  price: product['price']!,
-                  imagePath: product['imagePath']!,
+                  id: product.id,
+                  title: product.title,
+                  subtitle: product.subtitle,
+                  price: product.price,
+                  imagePath: product.imagePath,
+                  inStock: product.inStock,
                 ),
               );
             },

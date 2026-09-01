@@ -2,33 +2,82 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/cart_provider.dart';
+import '../viewmodels/cart_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import '../models/cart_item.dart';
 import 'checkout_screen.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   static const String path = '/cart';
   const CartScreen({super.key});
 
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
   static const Color _goldDark = Color(0xFFB8860B);
   static const Color _goldMid = Color(0xFFD4A017);
   static const Color _goldAccent = Color(0xFFFFD700);
   static const Color _emeraldGreen = Color(0xFF2E513D);
 
   @override
-  Widget build(BuildContext context) {
-    final cart = Provider.of<CartProvider>(context);
-    final isDark = cart.isDarkMode;
-    final bgCream = isDark ? const Color(0xFF121212) : const Color(0xFFFAF6EF);
-    final cardWhite = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
-    final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<CartViewModel>(context, listen: false).fetchCart(customerId);
+    });
+  }
 
-    // Group items by ID to show quantity
-    final Map<String, List<CartItem>> groupedItems = {};
-    for (var item in cart.items) {
-      groupedItems.putIfAbsent(item.id, () => []).add(item);
+  Widget _buildImage(
+    String path, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.contain,
+  }) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/images/product1.png',
+          width: width,
+          height: height,
+          fit: fit,
+        ),
+      );
+    } else {
+      return Image.asset(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/images/product1.png',
+          width: width,
+          height: height,
+          fit: fit,
+        ),
+      );
     }
-    final uniqueKeys = groupedItems.keys.toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cartVM = Provider.of<CartViewModel>(context);
+    final authVM = Provider.of<AuthViewModel>(context);
+    final customerId = authVM.currentUser?.id ?? '1';
+    final isDark = cartVM.isDarkMode;
+    final bgCream = isDark ? const Color(0xFF121212) : const Color(0xFFFAF6EF);
+    final cardWhite = isDark
+        ? const Color(0xFF1E1E1E)
+        : const Color(0xFFFFFFFF);
+    final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
 
     return Scaffold(
       backgroundColor: bgCream,
@@ -45,7 +94,7 @@ class CartScreen extends StatelessWidget {
               ),
             ),
             Text(
-              "${cart.items.length} ${cart.items.length == 1 ? 'item' : 'items'} selected",
+              "${cartVM.items.length} ${cartVM.items.length == 1 ? 'item' : 'items'} selected",
               style: GoogleFonts.poppins(
                 fontSize: 11,
                 color: _goldMid,
@@ -66,20 +115,19 @@ class CartScreen extends StatelessWidget {
           child: Container(color: _goldMid.withAlpha(30), height: 1),
         ),
       ),
-      body: cart.items.isEmpty
-          ? _buildEmptyCartView(context, cart)
+      body: cartVM.isLoading && cartVM.items.isEmpty
+          ? const Center(child: CircularProgressIndicator(color: _goldMid))
+          : cartVM.items.isEmpty
+          ? _buildEmptyCartView(context, cartVM)
           : Column(
               children: [
                 Expanded(
                   child: ListView.builder(
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    itemCount: uniqueKeys.length,
+                    itemCount: cartVM.items.length,
                     itemBuilder: (context, index) {
-                      final key = uniqueKeys[index];
-                      final list = groupedItems[key]!;
-                      final item = list.first;
-                      final quantity = list.length;
+                      final item = cartVM.items[index];
 
                       return Container(
                         margin: const EdgeInsets.symmetric(
@@ -142,18 +190,13 @@ class CartScreen extends StatelessWidget {
                                       child: Padding(
                                         padding: const EdgeInsets.all(6),
                                         child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: item.imagePath.startsWith('http')
-                                              ? Image.network(
-                                                  item.imagePath,
-                                                  fit: BoxFit.contain,
-                                                  errorBuilder: (context, error, stackTrace) =>
-                                                      Image.asset('assets/images/product1.png', fit: BoxFit.contain),
-                                                )
-                                              : Image.asset(
-                                                  item.imagePath,
-                                                  fit: BoxFit.contain,
-                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          child: _buildImage(
+                                            item.imagePath,
+                                            fit: BoxFit.contain,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -161,7 +204,8 @@ class CartScreen extends StatelessWidget {
                                     // 2. Product Details
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             item.title,
@@ -182,9 +226,12 @@ class CartScreen extends StatelessWidget {
                                             ),
                                             decoration: BoxDecoration(
                                               color: _goldMid.withOpacity(0.08),
-                                              borderRadius: BorderRadius.circular(6),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                               border: Border.all(
-                                                color: _goldMid.withOpacity(0.2),
+                                                color: _goldMid.withOpacity(
+                                                  0.2,
+                                                ),
                                                 width: 0.8,
                                               ),
                                             ),
@@ -212,30 +259,42 @@ class CartScreen extends StatelessWidget {
                                     ),
                                     // 3. Actions Column (Delete + Quantity Selector)
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         // Delete trash icon
                                         GestureDetector(
-                                          onTap: () {
-                                            cart.removeItem(item.id);
-                                            ScaffoldMessenger.of(context).showSnackBar(
+                                          onTap: () async {
+                                            await cartVM.removeCartItem(
+                                              customerId,
+                                              item.id,
+                                            );
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  "Removed all ${item.title} from Bag",
+                                                  "Removed ${item.title} from Bag",
                                                 ),
                                                 backgroundColor: _emeraldGreen,
-                                                behavior: SnackBarBehavior.floating,
+                                                behavior:
+                                                    SnackBarBehavior.floating,
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
                                                 ),
-                                                duration: const Duration(seconds: 1),
+                                                duration: const Duration(
+                                                  seconds: 1,
+                                                ),
                                               ),
                                             );
                                           },
                                           child: Container(
                                             padding: const EdgeInsets.all(6),
                                             decoration: BoxDecoration(
-                                              color: Colors.red.withOpacity(0.06),
+                                              color: Colors.red.withOpacity(
+                                                0.06,
+                                              ),
                                               shape: BoxShape.circle,
                                             ),
                                             child: const Icon(
@@ -250,8 +309,12 @@ class CartScreen extends StatelessWidget {
                                         Container(
                                           padding: const EdgeInsets.all(2),
                                           decoration: BoxDecoration(
-                                            color: isDark ? const Color(0xFF2E2E2E) : Colors.grey.shade100,
-                                            borderRadius: BorderRadius.circular(30),
+                                            color: isDark
+                                                ? const Color(0xFF2E2E2E)
+                                                : Colors.grey.shade100,
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
                                             border: Border.all(
                                               color: _goldMid.withOpacity(0.2),
                                               width: 1,
@@ -261,13 +324,21 @@ class CartScreen extends StatelessWidget {
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
                                               GestureDetector(
-                                                onTap: () => cart.removeSingleItem(item.id),
+                                                onTap: () =>
+                                                    cartVM.updateQuantity(
+                                                      customerId,
+                                                      item.id,
+                                                      item.quantity - 1,
+                                                    ),
                                                 child: Container(
-                                                  padding: const EdgeInsets.all(5),
-                                                  decoration: const BoxDecoration(
-                                                    color: Colors.white,
-                                                    shape: BoxShape.circle,
+                                                  padding: const EdgeInsets.all(
+                                                    5,
                                                   ),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        color: Colors.white,
+                                                        shape: BoxShape.circle,
+                                                      ),
                                                   child: const Icon(
                                                     Icons.remove,
                                                     size: 12,
@@ -276,11 +347,12 @@ class CartScreen extends StatelessWidget {
                                                 ),
                                               ),
                                               Padding(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                    ),
                                                 child: Text(
-                                                  "$quantity",
+                                                  "${item.quantity}",
                                                   style: GoogleFonts.poppins(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 13,
@@ -289,13 +361,21 @@ class CartScreen extends StatelessWidget {
                                                 ),
                                               ),
                                               GestureDetector(
-                                                onTap: () => cart.addToCart(item),
+                                                onTap: () =>
+                                                    cartVM.updateQuantity(
+                                                      customerId,
+                                                      item.id,
+                                                      item.quantity + 1,
+                                                    ),
                                                 child: Container(
-                                                  padding: const EdgeInsets.all(5),
-                                                  decoration: const BoxDecoration(
-                                                    color: _goldMid,
-                                                    shape: BoxShape.circle,
+                                                  padding: const EdgeInsets.all(
+                                                    5,
                                                   ),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        color: _goldMid,
+                                                        shape: BoxShape.circle,
+                                                      ),
                                                   child: const Icon(
                                                     Icons.add,
                                                     size: 12,
@@ -318,14 +398,14 @@ class CartScreen extends StatelessWidget {
                     },
                   ),
                 ),
-                _buildCheckoutSection(context, cart),
+                _buildCheckoutSection(context, cartVM),
               ],
             ),
     );
   }
 
-  Widget _buildEmptyCartView(BuildContext context, CartProvider cart) {
-    final isDark = cart.isDarkMode;
+  Widget _buildEmptyCartView(BuildContext context, CartViewModel cartVM) {
+    final isDark = cartVM.isDarkMode;
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
 
     return Center(
@@ -369,14 +449,12 @@ class CartScreen extends StatelessWidget {
             const SizedBox(height: 30),
             Container(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_goldMid, _goldDark],
-                ),
+                gradient: const LinearGradient(colors: [_goldMid, _goldDark]),
                 borderRadius: BorderRadius.circular(30),
               ),
               child: ElevatedButton(
                 onPressed: () {
-                  cart.setTabIndex(0); // Switch to Home Tab
+                  cartVM.setTabIndex(0); // Switch to Home Tab
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
@@ -402,19 +480,16 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCheckoutSection(BuildContext context, CartProvider cart) {
-    final isDark = cart.isDarkMode;
-    final cardWhite = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+  Widget _buildCheckoutSection(BuildContext context, CartViewModel cartVM) {
+    final isDark = cartVM.isDarkMode;
+    final cardWhite = isDark
+        ? const Color(0xFF1E1E1E)
+        : const Color(0xFFFFFFFF);
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
+    final authVM = Provider.of<AuthViewModel>(context);
 
-    // Calculate actual subtotal
-    double subtotal = 0.0;
-    for (var item in cart.items) {
-      double priceVal =
-          double.tryParse(item.price.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      subtotal += priceVal;
-    }
-    String subtotalStr = '₹${subtotal.toStringAsFixed(2)}';
+    String subtotalStr = '₹${cartVM.subtotal.toStringAsFixed(2)}';
+    String totalStr = '₹${cartVM.total.toStringAsFixed(2)}';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 25),
@@ -428,10 +503,7 @@ class CartScreen extends StatelessWidget {
           ),
         ],
         borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-        border: Border.all(
-          color: _goldMid.withAlpha(20),
-          width: 1,
-        ),
+        border: Border.all(color: _goldMid.withAlpha(20), width: 1),
       ),
       child: Column(
         children: [
@@ -442,10 +514,7 @@ class CartScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: _goldMid.withOpacity(0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _goldMid.withOpacity(0.2),
-                width: 1,
-              ),
+              border: Border.all(color: _goldMid.withOpacity(0.2), width: 1),
             ),
             child: Row(
               children: [
@@ -503,21 +572,22 @@ class CartScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                "FREE",
+                cartVM.shipping == 0.0
+                    ? "FREE"
+                    : "₹${cartVM.shipping.toStringAsFixed(2)}",
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green.shade700,
+                  color: cartVM.shipping == 0.0
+                      ? Colors.green.shade700
+                      : textDark,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
           // Luxury thin divider
-          Container(
-            height: 1,
-            color: _goldMid.withOpacity(0.15),
-          ),
+          Container(height: 1, color: _goldMid.withOpacity(0.15)),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -531,7 +601,7 @@ class CartScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                subtotalStr,
+                totalStr,
                 style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -546,9 +616,7 @@ class CartScreen extends StatelessWidget {
             width: double.infinity,
             height: 52,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_goldMid, _goldDark],
-              ),
+              gradient: const LinearGradient(colors: [_goldMid, _goldDark]),
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
@@ -560,7 +628,7 @@ class CartScreen extends StatelessWidget {
             ),
             child: ElevatedButton(
               onPressed: () {
-                if (cart.isLoggedIn) {
+                if (authVM.isAuthenticated) {
                   Navigator.pushNamed(context, CheckoutScreen.path);
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(

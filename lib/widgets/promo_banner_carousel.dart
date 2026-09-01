@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_products.dart';
+import '../viewmodels/product_viewmodel.dart';
 import '../screens/search_screen.dart';
 
 class PromoBannerCarousel extends StatefulWidget {
@@ -166,11 +166,26 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: () {
+                                  final productVM = Provider.of<ProductViewModel>(context, listen: false);
+                                  final List<Map<String, String>> searchProducts = productVM.products
+                                      .map(
+                                        (p) => <String, String>{
+                                          'id': p.id,
+                                          'title': p.title,
+                                          'subtitle': p.subtitle,
+                                          'price': p.price,
+                                          'imagePath': p.imagePath,
+                                          'category': p.category,
+                                          'gender': p.gender,
+                                        },
+                                      )
+                                      .toList();
+
                                   Navigator.push(
                                     context,
                                     PageRouteBuilder(
                                       pageBuilder: (_, __, ___) => SearchScreen(
-                                        allProducts: allProducts,
+                                        allProducts: searchProducts,
                                         initialQuery: banner['buttonText'] == "Shop Now" ? "Bracelets" : "",
                                       ),
                                       transitionsBuilder: (_, anim, __, child) =>

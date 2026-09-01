@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:provider/provider.dart';
+import '../helpers/toast_helper.dart';
 
 import '../providers/cart_provider.dart';
+import '../viewmodels/product_viewmodel.dart';
+import '../models/category.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'cart_screen.dart';
+import 'category_products_screen.dart';
+import '../widgets/animated_cart_badge.dart';
+import '../helpers/cart_animation_helper.dart';
+import '../viewmodels/cart_viewmodel.dart';
 
 class CategoriesScreen extends StatefulWidget {
   static const String path = '/categories';
@@ -17,8 +23,6 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  String _selectedGender = 'Womens';
-
   Color get _goldDark => const Color(0xFFB8860B);
   Color get _goldMid => const Color(0xFFD4A017);
   Color get _goldLight => const Color(0xFFFFD700);
@@ -30,101 +34,34 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       : const Color(0xFFFFFFFF);
   Color get _emeraldGreen => const Color(0xFF2E513D);
 
-  final List<String> _genders = ['Womens', 'Gents', 'Kids', 'Unisex'];
-
-  // Map of subcategories per gender
-  final Map<String, List<Map<String, String>>> _categoriesMap = const {
-    'Womens': [
-      {
-        'title': 'Necklaces',
-        'image': 'assets/images/necklace2.png',
-        'tagline': 'Timeless elegance for your neckline',
-      },
-      {
-        'title': 'Earrings',
-        'image': 'assets/images/earring.png',
-        'tagline': 'Dazzling pieces for every occasion',
-      },
-      {
-        'title': 'Rings',
-        'image': 'assets/images/rings.png',
-        'tagline': 'Crafted luxury at your fingertips',
-      },
-      {
-        'title': 'Bracelets',
-        'image': 'assets/images/bracelet.png',
-        'tagline': 'Delicate wristwear in pure gold',
-      },
-      {
-        'title': 'Wedding Sets',
-        'image': 'assets/images/wed5.png',
-        'tagline': 'Bridal masterpieces for your big day',
-      },
-    ],
-    'Gents': [
-      {
-        'title': 'Chains',
-        'image': 'assets/images/necklace.png',
-        'tagline': 'Sleek and solid everyday gold chains',
-      },
-      {
-        'title': 'Rings',
-        'image': 'assets/images/ring.png',
-        'tagline': 'Bold & statement rings for men',
-      },
-      {
-        'title': 'Bracelets',
-        'image': 'assets/images/bracelet.png',
-        'tagline': 'Stylish and sturdy gold bracelets',
-      },
-      {
-        'title': 'Kada',
-        'image': 'assets/images/product1.png',
-        'tagline': 'Traditional crafted gold kadas',
-      },
-    ],
-    'Kids': [
-      {
-        'title': 'Earrings',
-        'image': 'assets/images/earring.png',
-        'tagline': 'Cute & lightweight studs for children',
-      },
-      {
-        'title': 'Bracelets',
-        'image': 'assets/images/bracelet.png',
-        'tagline': 'Charming adjustable link wristwear',
-      },
-      {
-        'title': 'Rings',
-        'image': 'assets/images/ring.png',
-        'tagline': 'Delicate and smooth little gold rings',
-      },
-    ],
-    'Unisex': [
-      {
-        'title': 'Chains',
-        'image': 'assets/images/necklace.png',
-        'tagline': 'Classic chains designed for everyone',
-      },
-      {
-        'title': 'Rings',
-        'image': 'assets/images/rings.png',
-        'tagline': 'Elegant everyday bands for all',
-      },
-      {
-        'title': 'Bracelets',
-        'image': 'assets/images/bracelet.png',
-        'tagline': 'Versatile wristwear to complement any style',
-      },
-    ],
-  };
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final productVM = Provider.of<ProductViewModel>(context, listen: false);
+      List<Future> futures = [
+        productVM.fetchCategories(),
+      ];
+      if (productVM.products.isEmpty) {
+        futures.add(productVM.fetchProducts());
+      }
+      await Future.wait(futures);
+      if (mounted && productVM.errorMessage != null) {
+        ToastHelper.showErrorToast(
+          context,
+          "Categories API Error: ${productVM.errorMessage}",
+        );
+      }
+    });
+  }
 
   Widget _buildCartIconWithBadge(BuildContext context) {
-    return Consumer<CartProvider>(
-      builder: (context, cart, child) => Stack(
+    return Consumer<CartViewModel>(
+      builder: (context, cartVM, child) => Stack(
         clipBehavior: Clip.none,
         children: [
           GestureDetector(
+            key: CartAnimationHelper.categoriesCartKey,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CartScreen()),
@@ -143,7 +80,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 ],
               ),
               child: Icon(
-                Icons.shopping_cart_outlined,
+                Icons.shopping_bag_outlined,
                 color: Provider.of<CartProvider>(context).isDarkMode
                     ? Colors.white
                     : Colors.black87,
@@ -151,39 +88,50 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               ),
             ),
           ),
-          if (cart.items.isNotEmpty)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text(
-                  '${cart.items.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
+          Positioned(
+            right: -2,
+            top: -2,
+            child: AnimatedCartBadge(count: cartVM.items.length),
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildImage(String path, {BoxFit fit = BoxFit.contain}) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Image.asset('assets/images/necklace2.png', fit: fit),
+      );
+    } else {
+      return Image.asset(
+        path,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Image.asset('assets/images/necklace2.png', fit: fit),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final subCategories = _categoriesMap[_selectedGender] ?? [];
     final isDark = Provider.of<CartProvider>(context).isDarkMode;
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
     final textMuted = isDark ? Colors.white60 : Colors.black54;
+
+    final productVM = Provider.of<ProductViewModel>(context);
+    final List<Map<String, String>> searchProducts = productVM.products.map((p) => <String, String>{
+          'id': p.id,
+          'title': p.title,
+          'subtitle': p.subtitle,
+          'price': p.price,
+          'imagePath': p.imagePath,
+          'category': p.category,
+          'gender': p.gender,
+        }).toList();
+
+    final categoriesList = productVM.categories;
 
     return Scaffold(
       backgroundColor: _bgCream,
@@ -199,7 +147,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           "Nakshathra",
@@ -210,7 +157,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                             letterSpacing: 1.5,
                           ),
                         ),
-                        _buildCartIconWithBadge(context),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -231,190 +177,166 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // --- GENDER PILLS SELECTOR ---
-                    SizedBox(
-                      height: 46,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: _genders.length,
-                        itemBuilder: (context, index) {
-                          final gender = _genders[index];
-                          final isSelected = _selectedGender == gender;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedGender = gender;
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? _emeraldGreen
-                                      : _cardWhite,
-                                  borderRadius: BorderRadius.circular(25),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? Colors.transparent
-                                        : _goldMid.withOpacity(0.3),
-                                    width: 1.2,
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: _emeraldGreen.withOpacity(
-                                              0.3,
-                                            ),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    gender,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : textDark,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 15),
                   ],
                 ),
               ),
             ),
 
             // --- CATEGORIES LIST ---
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final cat = subCategories[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: GestureDetector(
-                      onTap: () {
-                        // Open Search Screen with pre-filled category filter (e.g. Gents Rings)
-                        Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder: (_, __, ___) => SearchScreen(
-                              allProducts: HomeScreen.allProducts,
-                              initialQuery: '$_selectedGender ${cat['title']}',
-                            ),
-                            transitionsBuilder: (_, anim, __, child) =>
-                                FadeTransition(opacity: anim, child: child),
-                            transitionDuration: const Duration(
-                              milliseconds: 250,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        height: 130,
-                        decoration: BoxDecoration(
-                          color: _cardWhite,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _goldMid.withOpacity(0.08),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: _goldMid.withOpacity(0.15),
-                            width: 1,
+            if (productVM.isLoading && categoriesList.isEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Container(
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF262626) : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(20),
                           ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Row(
-                            children: [
-                              // Details
-                              Expanded(
-                                flex: 6,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        cat['title']!,
-                                        style: GoogleFonts.playfairDisplay(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                          color: textDark,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        cat['tagline']!,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: textMuted,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
+                      );
+                    },
+                    childCount: 3,
+                  ),
+                ),
+              )
+            else if (categoriesList.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    "No categories available",
+                    style: TextStyle(color: textMuted),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final cat = categoriesList[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              CategoryProductsScreen.path,
+                              arguments: {
+                                'categoryId': cat.id,
+                                'categoryName': cat.name,
+                              },
+                            );
+                          },
+                          child: Container(
+                            height: 130,
+                            decoration: BoxDecoration(
+                              color: _cardWhite,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _goldMid.withOpacity(0.08),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
                                 ),
+                              ],
+                              border: Border.all(
+                                color: _goldMid.withOpacity(0.15),
+                                width: 1,
                               ),
-                              // Image
-                              Expanded(
-                                flex: 4,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        _goldLight.withOpacity(0.1),
-                                        _goldMid.withOpacity(0.2),
-                                      ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Row(
+                                children: [
+                                  // Details
+                                  Expanded(
+                                    flex: 6,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(20.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            cat.name,
+                                            style: GoogleFonts.playfairDisplay(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                              color: textDark,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            "Explore our beautiful collections of ${cat.name}",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              color: textMuted,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                  child: Image.asset(
-                                    cat['image']!,
-                                    fit: BoxFit.contain,
+                                  // Image
+                                  Expanded(
+                                    flex: 4,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            _goldLight.withOpacity(0.1),
+                                            _goldMid.withOpacity(0.2),
+                                          ],
+                                        ),
+                                      ),
+                                      child: _buildImage(cat.imageUrl, fit: BoxFit.contain),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  );
-                }, childCount: subCategories.length),
+                      );
+                    },
+                    childCount: categoriesList.length,
+                  ),
+                ),
               ),
-            ),
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
           ],
         ),
       ),
     );
+  }
+
+  Category catPlaceholder() {
+    return Category(id: '', name: '', imageUrl: '');
+  }
+}
+
+// Simple dummy class to avoid compile issues
+class DummyCategory {
+  final String id = '';
+  final String name = '';
+  final String imageUrl = '';
+}
+extension CategoryFallback on List {
+  dynamic firstWhere(bool Function(dynamic) test, {required dynamic Function() orElse}) {
+    for (var element in this) {
+      if (test(element)) return element;
+    }
+    return orElse();
   }
 }

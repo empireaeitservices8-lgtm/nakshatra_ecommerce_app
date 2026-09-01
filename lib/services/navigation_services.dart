@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../screens/splash_screen.dart';
+
+import '../config/app_config.dart';
+import '../features/splashscreen/view/splashscreen.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/cart_screen.dart';
@@ -15,8 +17,14 @@ import '../screens/saved_addresses_screen.dart';
 import '../screens/wishlist_screen.dart';
 import '../screens/checkout_screen.dart';
 import '../screens/signup_screen.dart';
+import '../screens/gold_scheme/gold_scheme_screen.dart';
+import '../screens/product_detail_screen.dart';
+import '../screens/chat_screen.dart';
+import '../screens/category_products_screen.dart';
+import '../screens/latest_models_screen.dart';
+import '../screens/recommendations_screen.dart';
 
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> navigatorKey = AppConfig.navKey;
 
 Route<dynamic>? generateRoute(RouteSettings settings) {
   debugPrint("Navigating to: ${settings.name}");
@@ -51,6 +59,19 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
       return MaterialPageRoute(builder: (_) => const CheckoutScreen());
     case SignUpScreen.path:
       return MaterialPageRoute(builder: (_) => const SignUpScreen());
+    case GoldSchemeScreen.path:
+      return MaterialPageRoute(builder: (_) => const GoldSchemeScreen());
+    case ProductDetailScreen.path:
+      final args = settings.arguments as Map<String, dynamic>;
+      return MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(
+          productId: args['productId'] as String,
+          initialTitle: args['initialTitle'] as String,
+          initialPrice: args['initialPrice'] as String,
+          initialImagePath: args['initialImagePath'] as String,
+          heroTag: args['heroTag'] as String?,
+        ),
+      );
     case SearchScreen.path:
       final args = settings.arguments as Map<String, dynamic>?;
       return MaterialPageRoute(
@@ -59,6 +80,20 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
           initialQuery: args?['initialQuery'] as String?,
         ),
       );
+    case ChatScreen.path:
+      return MaterialPageRoute(builder: (_) => const ChatScreen());
+    case CategoryProductsScreen.path:
+      final args = settings.arguments as Map<String, dynamic>;
+      return MaterialPageRoute(
+        builder: (_) => CategoryProductsScreen(
+          categoryId: args['categoryId'] as String,
+          categoryName: args['categoryName'] as String,
+        ),
+      );
+    case LatestModelsScreen.path:
+      return MaterialPageRoute(builder: (_) => const LatestModelsScreen());
+    case RecommendationsScreen.path:
+      return MaterialPageRoute(builder: (_) => const RecommendationsScreen());
     default:
       return MaterialPageRoute(builder: (_) => const SplashScreen());
   }

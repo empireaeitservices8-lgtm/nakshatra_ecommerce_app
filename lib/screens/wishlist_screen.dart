@@ -3,9 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/cart_provider.dart';
-import '../models/cart_item.dart';
-import '../models/product.dart';
+import '../viewmodels/wishlist_viewmodel.dart';
+import '../viewmodels/cart_viewmodel.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import 'cart_screen.dart';
+import 'product_detail_screen.dart';
 
 class WishlistScreen extends StatefulWidget {
   static const String path = '/wishlist';
@@ -30,14 +32,58 @@ class _WishlistScreenState extends State<WishlistScreen> {
       ? Colors.white
       : const Color(0xFF2C1A00);
 
-  void _removeItem(Product product) {
-    Provider.of<CartProvider>(context, listen: false).toggleWishlist(product);
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<WishlistViewModel>(
+        context,
+        listen: false,
+      ).fetchWishlist(customerId);
+    });
+  }
+
+  Widget _buildImage(
+    String path, {
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.contain,
+  }) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return Image.network(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/images/product1.png',
+          width: width,
+          height: height,
+          fit: fit,
+        ),
+      );
+    } else {
+      return Image.asset(
+        path,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/images/product1.png',
+          width: width,
+          height: height,
+          fit: fit,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
-    final wishlistItems = cartProvider.wishlist;
+    final wishlistVM = Provider.of<WishlistViewModel>(context);
 
     return Scaffold(
       backgroundColor: _bgCream,
@@ -53,22 +99,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
         backgroundColor: _cardWhite,
         foregroundColor: _textDark,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          Center(
-            child: _buildCartIconWithBadge(context),
-          ),
-          const SizedBox(width: 16),
-        ],
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        actions: const [],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(color: _goldMid.withAlpha(30), height: 1),
         ),
       ),
-      body: wishlistItems.isEmpty
+      body: wishlistVM.isLoading && wishlistVM.items.isEmpty
+          ? const Center(child: CircularProgressIndicator(color: _goldMid))
+          : wishlistVM.items.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -93,9 +138,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
           : ListView.builder(
               physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              itemCount: wishlistItems.length,
+              itemCount: wishlistVM.items.length,
               itemBuilder: (context, index) {
-                final item = wishlistItems[index];
+                final item = wishlistVM.items[index];
                 return Container(
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   padding: const EdgeInsets.all(12),
@@ -116,64 +161,80 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   ),
                   child: Row(
                     children: [
-                      // Product Image Container
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: _bgCream,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: _goldMid.withAlpha(30)),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: item.imagePath.startsWith('http')
-                              ? Image.network(
-                                  item.imagePath,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Image.asset('assets/images/product1.png', fit: BoxFit.contain),
-                                )
-                              : Image.asset(
-                                  item.imagePath,
-                                  fit: BoxFit.contain,
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Details
+                      // Interactive product image and details
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.title,
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                                color: _textDark,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              ProductDetailScreen.path,
+                              arguments: {
+                                'productId': item.id,
+                                'initialTitle': item.title,
+                                'initialPrice': item.price,
+                                'initialImagePath': item.imagePath,
+                                'heroTag': 'wishlist_${item.id}',
+                              },
+                            );
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: Row(
+                            children: [
+                              // Product Image Container
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: _bgCream,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: _goldMid.withAlpha(30)),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: _buildImage(
+                                    item.imagePath,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item.subtitle,
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: Colors.grey.shade500,
+                              const SizedBox(width: 16),
+                              // Details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                        color: _textDark,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.subtitle,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      item.price,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        color: _goldDark,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              item.price,
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: _goldDark,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       // Add to Bag & Delete actions
@@ -185,27 +246,31 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               color: _emeraldGreen,
                               size: 22,
                             ),
-                            onPressed: () {
-                              Provider.of<CartProvider>(
+                            onPressed: () async {
+                              final cartVM = Provider.of<CartViewModel>(
                                 context,
                                 listen: false,
-                              ).addToCart(
-                                CartItem(
-                                  id: item.id,
-                                  title: item.title,
-                                  price: item.price,
-                                  imagePath: item.imagePath,
-                                ),
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    "Added ${item.title} to Bag!",
+                              final authVM = Provider.of<AuthViewModel>(
+                                context,
+                                listen: false,
+                              );
+                              final customerId = authVM.currentUser?.id ?? '1';
+                              final success = await cartVM.addToCart(
+                                customerId,
+                                item.id,
+                              );
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Added ${item.title} to Bag!",
+                                    ),
+                                    backgroundColor: _emeraldGreen,
+                                    duration: const Duration(seconds: 1),
                                   ),
-                                  backgroundColor: _emeraldGreen,
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
+                                );
+                              }
                             },
                           ),
                           IconButton(
@@ -214,7 +279,24 @@ class _WishlistScreenState extends State<WishlistScreen> {
                               color: Colors.redAccent,
                               size: 20,
                             ),
-                            onPressed: () => _removeItem(item),
+                            onPressed: () async {
+                              final customerId =
+                                  Provider.of<AuthViewModel>(
+                                    context,
+                                    listen: false,
+                                  ).currentUser?.id ??
+                                  '1';
+                              await wishlistVM.removeFromWishlist(
+                                customerId,
+                                item.id,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Removed from Wishlist"),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
