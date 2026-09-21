@@ -1,5 +1,8 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'help_center_screen.dart';
 import 'payment_methods_screen.dart';
 import 'refer_earn_screen.dart';
 import 'saved_addresses_screen.dart';
@@ -82,14 +85,21 @@ class _ProfileScreenState extends State<ProfileScreen>
       'icon': Icons.card_giftcard_outlined,
     },
     {
-      'title': 'Gold Scheme',
-      'subtitle': 'Manage your gold savings plan',
-      'icon': Icons.savings_outlined,
+      'title': 'Help Center',
+      'subtitle': 'FAQs & guides',
+      'icon': Icons.help_outline_rounded,
     },
     {
-      'title': 'Settings',
-      'subtitle': 'Notifications, theme, password',
-      'icon': Icons.settings_outlined,
+      'title': 'Delete Account',
+      'subtitle': 'Permanently remove your account',
+      'icon': Icons.delete_outline_rounded,
+      'isDanger': true,
+    },
+    {
+      'title': 'Logout',
+      'subtitle': 'Sign out of your account',
+      'icon': Icons.logout_rounded,
+      'isDanger': true,
     },
   ];
 
@@ -159,7 +169,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     final authVM = Provider.of<AuthViewModel>(context);
     final user = authVM.currentUser;
     final name = user?.name.isNotEmpty == true ? user!.name : 'Sarah Williams';
-    final email = user?.email.isNotEmpty == true ? user!.email : 'sarah.w@jewels.com';
+    final email = user?.email.isNotEmpty == true
+        ? user!.email
+        : 'sarah.w@jewels.com';
 
     return SliverAppBar(
       expandedHeight: 220,
@@ -378,13 +390,20 @@ class _ProfileScreenState extends State<ProfileScreen>
       children: [
         _menuHeader("MY ACCOUNT"),
         const SizedBox(height: 8),
-        _buildMenuCard([0, 1, 2, 3, 7]),
+        _buildMenuCard([0, 1, 2, 3]),
         const SizedBox(height: 24),
         _menuHeader("REWARDS & COMMUNITY"),
         const SizedBox(height: 8),
-        _buildMenuCard([4, 5, 6]),
+        _buildMenuCard([4, 5]),
+        const SizedBox(height: 24),
+        _menuHeader("SUPPORT"),
+        const SizedBox(height: 8),
+        _buildMenuCard([6]),
+        const SizedBox(height: 24),
+        _menuHeader("ACCOUNT"),
+        const SizedBox(height: 8),
+        _buildMenuCard([7, 8]),
         const SizedBox(height: 30),
-        _buildLogoutButton(),
       ],
     );
   }
@@ -425,6 +444,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             final index = indices[i];
             final item = _menuItems[index];
             final isLast = i == indices.length - 1;
+            final isDanger = item['isDanger'] == true;
+            final dangerColor = const Color(0xFFD32F2F);
+
             return Column(
               children: [
                 ListTile(
@@ -436,26 +458,31 @@ class _ProfileScreenState extends State<ProfileScreen>
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _goldLight.withOpacity(0.15),
-                          _goldMid.withOpacity(0.08),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: isDanger
+                          ? null
+                          : LinearGradient(
+                              colors: [
+                                _goldLight.withOpacity(0.15),
+                                _goldMid.withOpacity(0.08),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                      color: isDanger
+                          ? dangerColor.withOpacity(0.12)
+                          : null,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       item['icon'] as IconData,
-                      color: _goldDark,
+                      color: isDanger ? dangerColor : _goldDark,
                       size: 20,
                     ),
                   ),
                   title: Text(
                     item['title'] as String,
                     style: GoogleFonts.poppins(
-                      color: _textDark,
+                      color: isDanger ? dangerColor : _textDark,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -463,7 +490,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   subtitle: Text(
                     item['subtitle'] as String,
                     style: GoogleFonts.poppins(
-                      color: _textMuted,
+                      color: isDanger
+                          ? dangerColor.withOpacity(0.7)
+                          : _textMuted,
                       fontSize: 11.5,
                     ),
                   ),
@@ -471,13 +500,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: _bgCream,
+                      color: isDanger
+                          ? dangerColor.withOpacity(0.08)
+                          : _bgCream,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.chevron_right_rounded,
                       size: 18,
-                      color: _goldDark,
+                      color: isDanger ? dangerColor : _goldDark,
                     ),
                   ),
                   onTap: () {
@@ -523,10 +554,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                           builder: (_) => const ReferEarnScreen(),
                         ),
                       );
-                    } else if (item['title'] == 'Gold Scheme') {
-                      Navigator.pushNamed(context, '/gold_scheme');
-                    } else if (item['title'] == 'Settings') {
-                      Navigator.pushNamed(context, '/settings');
+                    } else if (item['title'] == 'Help Center') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HelpCenterScreen(),
+                        ),
+                      );
+                    } else if (item['title'] == 'Delete Account') {
+                      _showDeleteAccountDialog();
+                    } else if (item['title'] == 'Logout') {
+                      _showLogoutDialog();
                     }
                   },
                 ),
@@ -545,84 +583,144 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildLogoutButton() {
+  // ── Logout Confirmation Dialog ─────────────────────────────────────────────
+  void _showLogoutDialog() {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: OutlinedButton.icon(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: _cardWhite,
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: _cardWhite,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          "Logout",
+          style: GoogleFonts.playfairDisplay(
+            color: _textDark,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to sign out of your luxury account?",
+          style: GoogleFonts.poppins(color: _textMuted, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text("Cancel", style: TextStyle(color: _goldDark)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F),
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
               ),
-              title: Text(
-                "Logout",
-                style: GoogleFonts.playfairDisplay(
-                  color: _textDark,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Text(
-                "Are you sure you want to sign out of your luxury account?",
-                style: GoogleFonts.poppins(color: _textMuted, fontSize: 13),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("Cancel", style: TextStyle(color: _goldDark)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: () {
-                    authVM.logout();
-                    Navigator.pop(context);
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/login',
-                      (route) => false,
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Logged out successfully")),
-                    );
-                  },
-                  child: const Text(
-                    "Logout",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
             ),
-          );
-        },
-        icon: const Icon(
-          Icons.logout_rounded,
-          size: 18,
-          color: Colors.redAccent,
+            onPressed: () {
+              Provider.of<CartProvider>(
+                context,
+                listen: false,
+              ).setTabIndex(0);
+              authVM.logout();
+              Navigator.pop(dialogCtx);
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Logged out successfully")),
+              );
+            },
+            child: const Text(
+              "Logout",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Delete Account Confirmation Dialog ─────────────────────────────────────
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: _cardWhite,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-        label: Text(
-          "Sign Out",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-            color: Colors.redAccent,
+        title: Text(
+          "Delete Account?",
+          style: GoogleFonts.playfairDisplay(
+            color: const Color(0xFFD32F2F),
+            fontWeight: FontWeight.bold,
           ),
         ),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.redAccent, width: 1.2),
-          minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-          ),
+        content: Text(
+          "This will permanently delete your account and all associated data. This action cannot be undone.",
+          style: GoogleFonts.poppins(color: _textMuted, fontSize: 13),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text("Cancel", style: TextStyle(color: _goldDark)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final authVM = Provider.of<AuthViewModel>(context, listen: false);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              final nav = Navigator.of(context);
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
+              );
+
+              final success = await authVM.deleteAccount();
+
+              if (context.mounted) {
+                Navigator.pop(context); // Dismiss loading
+              }
+
+              if (success) {
+                scaffoldMessenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Account deleted/deactivated successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                nav.pushNamedAndRemoveUntil('/login', (route) => false);
+              } else {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      authVM.errorMessage?.isNotEmpty == true
+                          ? authVM.errorMessage!
+                          : 'Failed to delete account',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -631,8 +729,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _showEditProfileSheet(BuildContext context) {
     final authVM = Provider.of<AuthViewModel>(context, listen: false);
     final user = authVM.currentUser;
-    final nameCtrl = TextEditingController(text: user?.name ?? 'Sarah Williams');
-    final emailCtrl = TextEditingController(text: user?.email ?? 'sarah.w@jewels.com');
+    final nameCtrl = TextEditingController(
+      text: user?.name ?? 'Sarah Williams',
+    );
+    final emailCtrl = TextEditingController(
+      text: user?.email ?? 'sarah.w@jewels.com',
+    );
 
     showModalBottomSheet(
       context: context,
@@ -701,11 +803,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     final name = nameCtrl.text.trim();
                     final email = emailCtrl.text.trim();
                     if (name.isNotEmpty && email.isNotEmpty) {
-                      final success = await authVM.updateProfile(name: name, email: email);
+                      final success = await authVM.updateProfile(
+                        name: name,
+                        email: email,
+                      );
                       if (success) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Profile updated successfully!')),
+                          const SnackBar(
+                            content: Text('Profile updated successfully!'),
+                          ),
                         );
                       } else {
                         ToastHelper.showErrorToast(

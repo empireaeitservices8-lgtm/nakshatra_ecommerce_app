@@ -1,9 +1,11 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../providers/cart_provider.dart';
 import '../constants/app_colors.dart';
+import '../providers/cart_provider.dart';
 import '../viewmodels/product_viewmodel.dart';
 import '../screens/search_screen.dart';
 
@@ -133,7 +135,10 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
                       ),
                       // Content
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
@@ -166,8 +171,21 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: () {
-                                  final productVM = Provider.of<ProductViewModel>(context, listen: false);
-                                  final List<Map<String, String>> searchProducts = productVM.products
+                                  if (banner['buttonText'] == "Explore Collection") {
+                                    Provider.of<CartProvider>(
+                                      context,
+                                      listen: false,
+                                    ).setTabIndex(2);
+                                    return;
+                                  }
+
+                                  final productVM =
+                                      Provider.of<ProductViewModel>(
+                                        context,
+                                        listen: false,
+                                      );
+                                  final List<Map<String, String>>
+                                  searchProducts = productVM.products
                                       .map(
                                         (p) => <String, String>{
                                           'id': p.id,
@@ -184,13 +202,21 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
                                   Navigator.push(
                                     context,
                                     PageRouteBuilder(
-                                      pageBuilder: (_, __, ___) => SearchScreen(
+                                      pageBuilder: (_, _, _) => SearchScreen(
                                         allProducts: searchProducts,
-                                        initialQuery: banner['buttonText'] == "Shop Now" ? "Bracelets" : "",
+                                        initialQuery:
+                                            banner['buttonText'] == "Shop Now"
+                                            ? "Bracelets"
+                                            : "",
                                       ),
-                                      transitionsBuilder: (_, anim, __, child) =>
-                                          FadeTransition(opacity: anim, child: child),
-                                      transitionDuration: const Duration(milliseconds: 250),
+                                      transitionsBuilder: (_, anim, _, child) =>
+                                          FadeTransition(
+                                            opacity: anim,
+                                            child: child,
+                                          ),
+                                      transitionDuration: const Duration(
+                                        milliseconds: 250,
+                                      ),
                                     ),
                                   );
                                 },
@@ -237,9 +263,7 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
               width: isSelected ? 20 : 8,
               height: 8,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? goldAccent
-                    : goldAccent.withOpacity(0.3),
+                color: isSelected ? goldAccent : goldAccent.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(4),
               ),
             );

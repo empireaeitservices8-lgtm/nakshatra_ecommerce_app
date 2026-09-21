@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -32,9 +34,11 @@ class CartAnimationHelper {
     VoidCallback? onComplete,
   }) {
     final overlayState = Overlay.of(context);
-    final RenderBox? imageBox = imageKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? imageBox =
+        imageKey.currentContext?.findRenderObject() as RenderBox?;
     final cartIconKey = getActiveCartKey(context);
-    final RenderBox? cartBox = cartIconKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? cartBox =
+        cartIconKey.currentContext?.findRenderObject() as RenderBox?;
 
     if (imageBox == null || cartBox == null) {
       onComplete?.call();
@@ -64,7 +68,10 @@ class CartAnimationHelper {
           startOffset: startOffset,
           endOffset: endOffset,
           imagePath: imagePath,
-          imageSize: Size(min(imageSize.width, 100.0), min(imageSize.height, 100.0)),
+          imageSize: Size(
+            min(imageSize.width, 100.0),
+            min(imageSize.height, 100.0),
+          ),
           onAnimationEnd: () {
             entry.remove();
             onComplete?.call();
@@ -93,7 +100,8 @@ class _CurvedAnimationOverlay extends StatefulWidget {
   });
 
   @override
-  State<_CurvedAnimationOverlay> createState() => _CurvedAnimationOverlayState();
+  State<_CurvedAnimationOverlay> createState() =>
+      _CurvedAnimationOverlayState();
 }
 
 class _CurvedAnimationOverlayState extends State<_CurvedAnimationOverlay>
@@ -138,13 +146,16 @@ class _CurvedAnimationOverlayState extends State<_CurvedAnimationOverlay>
         // Quadratic Bezier Curve Calculation
         // Control Point: arcs upward and slightly to the side
         final controlX = (widget.startOffset.dx + widget.endOffset.dx) / 2;
-        final controlY = min(widget.startOffset.dy, widget.endOffset.dy) - 120.0;
+        final controlY =
+            min(widget.startOffset.dy, widget.endOffset.dy) - 120.0;
 
-        final double currentX = (1 - t) * (1 - t) * widget.startOffset.dx +
+        final double currentX =
+            (1 - t) * (1 - t) * widget.startOffset.dx +
             2 * (1 - t) * t * controlX +
             t * t * widget.endOffset.dx;
 
-        final double currentY = (1 - t) * (1 - t) * widget.startOffset.dy +
+        final double currentY =
+            (1 - t) * (1 - t) * widget.startOffset.dy +
             2 * (1 - t) * t * controlY +
             t * t * widget.endOffset.dy;
 
@@ -159,10 +170,7 @@ class _CurvedAnimationOverlayState extends State<_CurvedAnimationOverlay>
           top: currentY - widget.imageSize.height / 2,
           child: Opacity(
             opacity: opacity,
-            child: Transform.scale(
-              scale: scale,
-              child: child,
-            ),
+            child: Transform.scale(scale: scale, child: child),
           ),
         );
       },
@@ -195,19 +203,15 @@ class _CurvedAnimationOverlayState extends State<_CurvedAnimationOverlay>
       return Image.network(
         path,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/images/product1.png',
-          fit: BoxFit.cover,
-        ),
+        errorBuilder: (_, _, _) =>
+            Image.asset('assets/images/product1.png', fit: BoxFit.cover),
       );
     } else {
       return Image.asset(
         path,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Image.asset(
-          'assets/images/product1.png',
-          fit: BoxFit.cover,
-        ),
+        errorBuilder: (_, _, _) =>
+            Image.asset('assets/images/product1.png', fit: BoxFit.cover),
       );
     }
   }

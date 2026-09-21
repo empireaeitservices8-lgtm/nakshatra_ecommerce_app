@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'app_palette.dart';
 import 'brand_colors.dart';
@@ -36,7 +38,9 @@ ThemeData _buildTheme(Brightness brightness) {
     appBarTheme: AppBarTheme(
       elevation: 0,
       centerTitle: true,
-      backgroundColor: isDark ? AppPalette.surfaceDark : AppPalette.surfaceWhite,
+      backgroundColor: isDark
+          ? AppPalette.surfaceDark
+          : AppPalette.surfaceWhite,
       foregroundColor: isDark ? Colors.white : AppPalette.textDark,
       titleTextStyle: TextStyle(
         fontSize: 18,

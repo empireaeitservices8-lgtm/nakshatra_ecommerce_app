@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -41,12 +43,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final List<Map<String, String>> _addresses = [];
 
   // Payment method selection state
-  String _selectedPaymentMethod = 'card'; // card, paypal, bank, cod, gpay
+  String _selectedPaymentMethod = 'cod'; // default to cash on delivery
 
   // Cards data with CRED style themes
   final List<Map<String, String>> _savedCards = [];
   String? _selectedCardId;
-  final List<String> _cardThemes = ['platinum', 'emerald', 'gold'];
 
   // Card controllers
   final TextEditingController _cardNumberController = TextEditingController();
@@ -318,14 +319,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       ),
                       child: ElevatedButton(
                         onPressed: () async {
-                          if (nameCtrl.text.isEmpty ||
-                              phoneCtrl.text.isEmpty ||
-                              addrCtrl.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Please fill in all fields"),
-                                backgroundColor: Colors.redAccent,
-                              ),
+                          final name = nameCtrl.text.trim();
+                          final phone = phoneCtrl.text.trim();
+                          final addr = addrCtrl.text.trim();
+
+                          if (name.isEmpty || phone.isEmpty || addr.isEmpty) {
+                            ToastHelper.showErrorToast(
+                              context,
+                              "Please fill in all fields",
                             );
                             return;
                           }
@@ -340,25 +341,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             listen: false,
                           );
 
+                          final bool success;
                           if (isEditing) {
-                            await addressVM.updateAddress(
+                            success = await addressVM.updateAddress(
                               customerId: customerId,
                               addressId: existingAddress['id']!,
                               label: selectedLabel,
-                              name: nameCtrl.text,
-                              phone: phoneCtrl.text,
-                              address: addrCtrl.text,
+                              name: name,
+                              phone: phone,
+                              address: addr,
                             );
                           } else {
-                            await addressVM.addAddress(
+                            success = await addressVM.addAddress(
                               customerId: customerId,
                               label: selectedLabel,
-                              name: nameCtrl.text,
-                              phone: phoneCtrl.text,
-                              address: addrCtrl.text,
+                              name: name,
+                              phone: phone,
+                              address: addr,
                             );
                           }
-                          Navigator.pop(context);
+
+                          if (!mounted) return;
+                          if (success) {
+                            Navigator.pop(context);
+                            ToastHelper.showSuccessToast(
+                              context,
+                              isEditing
+                                  ? "Address updated successfully"
+                                  : "Address added successfully",
+                            );
+                            if (addressVM.addresses.isNotEmpty) {
+                              setState(() {
+                                _selectedAddressId =
+                                    addressVM.addresses.last.id;
+                              });
+                            }
+                          } else {
+                            ToastHelper.showErrorToast(
+                              context,
+                              addressVM.errorMessage ??
+                                  "Failed to save address",
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
@@ -694,6 +718,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   // STEP 1: CHOOSE DELIVERY ADDRESS (WITH DASHED ADD BUTTON AND LUXURIOUS GRID STYLE)
   Widget _buildAddressStep(bool isDark, Color cardWhite, Color textDark) {
+    final addressVM = Provider.of<AddressViewModel>(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -734,185 +760,285 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ),
 
-        // Grid/List of Addresses
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _addresses.length,
-          itemBuilder: (context, index) {
-            final addr = _addresses[index];
-            final isSelected = _selectedAddressId == addr['id'];
-
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedAddressId = addr['id']!;
-                });
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isSelected
-                        ? _goldAccent
-                        : Colors.grey.withOpacity(0.12),
-                    width: 1.5,
+        if (addressVM.isBusy && _addresses.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: CircularProgressIndicator(color: _goldAccent)),
+          )
+        else if (_addresses.isEmpty)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.withOpacity(0.15)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _goldAccent.withOpacity(0.1),
+                    shape: BoxShape.circle,
                   ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: _goldAccent.withOpacity(0.08),
-                            blurRadius: 15,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 6),
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
+                  child: const Icon(
+                    Icons.location_off_outlined,
+                    size: 40,
+                    color: _goldAccent,
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                const SizedBox(height: 16),
+                Text(
+                  "No Delivery Address Found",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "You haven't added any delivery address yet. Please add an address to continue with your checkout.",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddressForm(),
+                  icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                  label: Text(
+                    "Add Delivery Address",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _emeraldGreen,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          // Grid/List of Addresses
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _addresses.length,
+            itemBuilder: (context, index) {
+              final addr = _addresses[index];
+              final isSelected = _selectedAddressId == addr['id'];
+
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedAddressId = addr['id']!;
+                  });
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected
+                          ? _goldAccent
+                          : Colors.grey.withOpacity(0.12),
+                      width: 1.5,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: _goldAccent.withOpacity(0.08),
+                              blurRadius: 15,
+                              spreadRadius: 1,
+                              offset: const Offset(0, 6),
                             ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? _goldAccent.withOpacity(0.1)
-                                  : Colors.grey.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
                             ),
-                            child: Text(
-                              addr['label'] ?? 'Address',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                                color: isSelected
-                                    ? _goldAccent
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ),
-                          // Premium select check badge
-                          if (isSelected)
+                          ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
                             Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: const BoxDecoration(
-                                color: _goldAccent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 12,
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        addr['name'] ?? '',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        addr['address'] ?? '',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        addr['phone'] ?? '',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () =>
-                                _showAddressForm(existingAddress: addr),
-                            child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                horizontal: 10,
+                                vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: _goldAccent,
+                                color: isSelected
+                                    ? _goldAccent.withOpacity(0.1)
+                                    : Colors.grey.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                "Edit",
+                                addr['label'] ?? 'Address',
                                 style: GoogleFonts.poppins(
-                                  color: Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontSize: 11,
+                                  color: isSelected
+                                      ? _goldAccent
+                                      : Colors.grey.shade600,
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _addresses.removeAt(index);
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.grey.withOpacity(0.3),
+                            // Premium select check badge
+                            if (isSelected)
+                              Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: _goldAccent,
+                                  shape: BoxShape.circle,
                                 ),
-                                borderRadius: BorderRadius.circular(8),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
                               ),
-                              child: Icon(
-                                Icons.delete_outline,
-                                color: Colors.grey.shade500,
-                                size: 18,
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          addr['name'] ?? '',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          addr['address'] ?? '',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          addr['phone'] ?? '',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () =>
+                                  _showAddressForm(existingAddress: addr),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _goldAccent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  "Edit",
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () async {
+                                final customerId =
+                                    Provider.of<AuthViewModel>(
+                                      context,
+                                      listen: false,
+                                    ).currentUser?.id ??
+                                    '1';
+                                final delSuccess = await addressVM
+                                    .deleteAddress(customerId, addr['id']!);
+                                if (!mounted) return;
+                                if (delSuccess) {
+                                  ToastHelper.showSuccessToast(
+                                    context,
+                                    "Address deleted successfully",
+                                  );
+                                  if (_selectedAddressId == addr['id']) {
+                                    setState(() {
+                                      _selectedAddressId =
+                                          addressVM.addresses.isNotEmpty
+                                          ? addressVM.addresses.first.id
+                                          : '';
+                                    });
+                                  }
+                                } else {
+                                  ToastHelper.showErrorToast(
+                                    context,
+                                    addressVM.errorMessage ??
+                                        "Failed to delete address",
+                                  );
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: Colors.grey.withOpacity(0.3),
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.grey.shade500,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          ),
         const SizedBox(height: 20),
       ],
     );
@@ -1275,6 +1401,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                                     expiryParts[0];
                                                 _cardExpiryYearController.text =
                                                     expiryParts[1].length == 2
+                                                    // ignore: prefer_interpolation_to_compose_strings
                                                     ? '20' + expiryParts[1]
                                                     : expiryParts[1];
                                               }
@@ -1709,9 +1836,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         return;
                       }
 
-                      final formattedExpiry =
-                          '$monthText/${yearText.length == 4 ? yearText.substring(2) : yearText}';
-
                       final customerId =
                           Provider.of<AuthViewModel>(
                             context,
@@ -2030,7 +2154,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     Color textDark,
     CartProvider cart,
   ) {
-    final Map<String, String>? activeAddr = _addresses.firstWhere(
+    final Map<String, String> activeAddr = _addresses.firstWhere(
       (a) => a['id'] == _selectedAddressId,
       orElse: () => _addresses.isNotEmpty ? _addresses.first : {},
     );
@@ -2198,10 +2322,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               child: Center(
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Image.asset(
-                                    item.imagePath,
-                                    fit: BoxFit.contain,
-                                  ),
+                                  child: item.imagePath.startsWith('http')
+                                      ? Image.network(
+                                          item.imagePath,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (_, _, _) =>
+                                              const Icon(Icons.image, size: 24),
+                                        )
+                                      : Image.asset(
+                                          item.imagePath,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (_, _, _) =>
+                                              const Icon(Icons.image, size: 24),
+                                        ),
                                 ),
                               ),
                             ),
@@ -2234,7 +2367,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         right: 6,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
+                            horizontal: 6,
                             vertical: 2,
                           ),
                           decoration: const BoxDecoration(
@@ -2242,10 +2375,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            "1",
+                            "${item.quantity}",
                             style: GoogleFonts.poppins(
                               color: Colors.white,
-                              fontSize: 8,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2324,7 +2457,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            activeAddr?['name'] ?? '',
+                            activeAddr['name'] ?? '',
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -2333,7 +2466,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            activeAddr?['address'] ?? '',
+                            activeAddr['address'] ?? '',
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               color: isDark
@@ -2346,7 +2479,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            activeAddr?['phone'] ?? '',
+                            activeAddr['phone'] ?? '',
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -2371,7 +2504,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      (activeAddr?['label'] ?? 'HOME').toUpperCase(),
+                      (activeAddr['label'] ?? 'HOME').toUpperCase(),
                       style: GoogleFonts.poppins(
                         color: _goldAccent,
                         fontSize: 8,
@@ -2623,6 +2756,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           backgroundColor: Colors.green,
                         ),
                       );
+                    } else {
                       setState(() {
                         _isCouponApplied = false;
                         _promoDiscount = 0.0;
@@ -2708,21 +2842,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   textDark,
                 ),
                 const SizedBox(height: 12),
-                _buildPriceBreakdownRow("Shipping", 40.0, isDark, textDark),
-                const SizedBox(height: 12),
+                _buildPriceBreakdownRow("Shipping", 0.0, isDark, textDark),
                 if (_isCouponApplied) ...[
+                  const SizedBox(height: 12),
                   _buildPriceBreakdownRow(
-                    "Promo Code (FREE100 Applied!)",
+                    "Promo Code ($_appliedCouponCode Applied!)",
                     -_promoDiscount,
                     isDark,
                     textDark,
                     isDiscount: true,
                   ),
-                  const SizedBox(height: 12),
                 ],
+                const SizedBox(height: 12),
+                Container(height: 1, color: _goldMid.withOpacity(0.15)),
+                const SizedBox(height: 12),
                 _buildPriceBreakdownRow(
-                  "Import charges",
-                  128.0,
+                  "Total Amount",
+                  _calculateTotal(cart),
                   isDark,
                   textDark,
                 ),
@@ -2737,13 +2873,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   Widget _buildPriceBreakdownRow(
     String label,
-    double amount,
+    dynamic amount,
     bool isDark,
     Color textDark, {
     bool isDiscount = false,
   }) {
-    String sign = amount < 0 ? "-" : "";
-    double displayAmount = amount.abs();
+    String valueText = "";
+    if (amount is String) {
+      valueText = amount;
+    } else if (amount is num) {
+      if (label == "Shipping" && amount == 0.0) {
+        valueText = "FREE";
+      } else {
+        String sign = amount < 0 ? "-" : "";
+        double displayAmount = amount.abs().toDouble();
+        valueText = isDiscount
+            ? "$sign₹${displayAmount.toStringAsFixed(2)}"
+            : "₹${displayAmount.toStringAsFixed(2)}";
+      }
+    }
+
+    final bool isTotal = label == "Total Amount";
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2751,19 +2901,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         Text(
           label,
           style: GoogleFonts.poppins(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+            fontSize: isTotal ? 14 : 13,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+            color: isTotal
+                ? textDark
+                : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
           ),
         ),
         Text(
-          isDiscount ? "$sign\$$displayAmount" : "\$$displayAmount",
+          valueText,
           style: GoogleFonts.poppins(
-            fontSize: 13,
+            fontSize: isTotal ? 16 : 13,
             fontWeight: FontWeight.bold,
             color: isDiscount
                 ? Colors.red.shade600
-                : (isDark ? Colors.white : Colors.black87),
+                : (valueText == "FREE"
+                      ? Colors.green.shade700
+                      : (isTotal
+                            ? _goldDark
+                            : (isDark ? Colors.white : Colors.black87))),
           ),
         ),
       ],
@@ -2775,17 +2931,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     for (var item in cart.items) {
       double priceVal =
           double.tryParse(item.price.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
-      subtotal += priceVal;
+      subtotal += priceVal * item.quantity;
     }
     return subtotal;
   }
 
   double _calculateTotal(CartProvider cart) {
     double subtotal = _calculateSubtotal(cart);
-    double shipping = 40.0;
-    double importCharges = 128.0;
+    double shipping = 0.0;
     double discount = _isCouponApplied ? _promoDiscount : 0.0;
-    return subtotal + shipping + importCharges - discount;
+    double total = subtotal + shipping - discount;
+    return total < 0 ? 0.0 : total;
   }
 
   // FLOATING LUXURY DOCK BOTTOM BAR (PROCEED ACTION ONLY)
@@ -2795,11 +2951,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     double total = _calculateTotal(cart);
-    String totalStr = "\$${total.toStringAsFixed(2)}";
+    String totalStr = "₹${total.toStringAsFixed(2)}";
 
     // Determine primary action text
     String actionText = "Deliver Here";
-    if (_currentStep == 2) {
+    if (_currentStep == 1) {
+      actionText = _addresses.isNotEmpty
+          ? "Deliver Here"
+          : "Add Delivery Address";
+    } else if (_currentStep == 2) {
       if (_paymentSubStep == 1) {
         actionText = "Continue";
       } else if (_paymentSubStep == 2) {
@@ -2888,6 +3048,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       _currentStep = 2;
                       _paymentSubStep = 1;
                     });
+                  } else {
+                    _showAddressForm();
                   }
                 } else if (_currentStep == 2) {
                   if (_paymentSubStep == 1) {
@@ -2943,10 +3105,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final customerId =
         Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
         '1';
+
+    // Extract active address details
+    final activeAddr = _addresses.firstWhere(
+      (a) => a['id'] == _selectedAddressId,
+      orElse: () => _addresses.isNotEmpty ? _addresses.first : {},
+    );
+
+    String shippingAddress = activeAddr['address'] ?? '';
+    String shippingPhone = activeAddr['phone'] ?? '';
+    String shippingCity = 'Calicut';
+
+    if (shippingAddress.contains(',')) {
+      final parts = shippingAddress.split(',');
+      if (parts.length > 1 && parts.last.trim().isNotEmpty) {
+        shippingCity = parts.last.trim();
+      }
+    }
+
     final success = await orderVM.placeOrder(
       customerId: customerId,
       addressId: _selectedAddressId,
-      paymentMethod: _selectedPaymentMethod,
+      paymentMethod: 'cash',
+      shippingAddress: shippingAddress.isNotEmpty
+          ? shippingAddress
+          : '123 Main Street',
+      shippingCity: shippingCity,
+      shippingPhone: shippingPhone.isNotEmpty ? shippingPhone : '+919876543210',
+      notes: 'Deliver on weekend if possible',
       cardId: _selectedPaymentMethod == 'card' ? _selectedCardId : null,
       couponCode: _isCouponApplied ? _couponController.text.trim() : null,
     );
@@ -2965,7 +3151,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final cardWhite = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
 
-    Provider.of<CartViewModel>(context, listen: false).clearCart(customerId);
+    await Provider.of<CartViewModel>(
+      context,
+      listen: false,
+    ).clearCart(customerId);
     cart.clearCart();
     cart.setTabIndex(0);
 

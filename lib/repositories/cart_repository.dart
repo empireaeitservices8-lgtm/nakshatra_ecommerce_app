@@ -1,56 +1,60 @@
+import '../helpers/request_deduplicator.dart';
 import '../models/cart_item.dart';
 import '../services/api_service.dart';
 
 class CartRepository {
   final ApiService _apiService = ApiService();
+  final RequestDeduplicator _deduplicator = RequestDeduplicator();
 
   Future<Map<String, dynamic>> getCart({required String customerId}) async {
-    final response = await _apiService.post('/cart/view', data: {
-      'params': {
-        'customer_id': int.tryParse(customerId) ?? 1,
+    return _deduplicator.run('cart_$customerId', () async {
+      final response = await _apiService.post('/cart/view', data: {
+        'params': {
+          'customer_id': int.tryParse(customerId) ?? 1,
+        }
+      });
+      
+      final resData = response.data;
+      final result = resData['result'];
+      if (result == null) {
+        throw Exception('Invalid server response');
+      }
+
+      if (result['status'] == 200 || result['status'] == 'success' || result['success'] == true) {
+        final cart = result['cart'] as Map<String, dynamic>?;
+        
+        final list = (cart != null ? cart['items'] : result['data']) as List?;
+        final items = list != null
+            ? list.map((item) => CartItem.fromJson(item)).toList()
+            : <CartItem>[];
+        
+        double totalAmount = 0.0;
+        if (cart != null && cart['total_amount'] != null) {
+          final rawTotal = cart['total_amount'];
+          if (rawTotal is num) {
+            totalAmount = rawTotal.toDouble();
+          } else {
+            totalAmount = double.tryParse(rawTotal.toString()) ?? 0.0;
+          }
+        } else if (result['total_amount'] != null) {
+          final rawTotal = result['total_amount'];
+          if (rawTotal is num) {
+            totalAmount = rawTotal.toDouble();
+          } else {
+            totalAmount = double.tryParse(rawTotal.toString()) ?? 0.0;
+          }
+        }
+
+        return {
+          'items': items,
+          'subtotal': totalAmount,
+          'shipping': 0.0,
+          'total': totalAmount,
+        };
+      } else {
+        throw Exception(result['message'] ?? 'Failed to fetch cart');
       }
     });
-    
-    final resData = response.data;
-    final result = resData['result'];
-    if (result == null) {
-      throw Exception('Invalid server response');
-    }
-
-    if (result['status'] == 200 || result['status'] == 'success' || result['success'] == true) {
-      final cart = result['cart'] as Map<String, dynamic>?;
-      
-      final list = (cart != null ? cart['items'] : result['data']) as List?;
-      final items = list != null
-          ? list.map((item) => CartItem.fromJson(item)).toList()
-          : <CartItem>[];
-      
-      double totalAmount = 0.0;
-      if (cart != null && cart['total_amount'] != null) {
-        final rawTotal = cart['total_amount'];
-        if (rawTotal is num) {
-          totalAmount = rawTotal.toDouble();
-        } else {
-          totalAmount = double.tryParse(rawTotal.toString()) ?? 0.0;
-        }
-      } else if (result['total_amount'] != null) {
-        final rawTotal = result['total_amount'];
-        if (rawTotal is num) {
-          totalAmount = rawTotal.toDouble();
-        } else {
-          totalAmount = double.tryParse(rawTotal.toString()) ?? 0.0;
-        }
-      }
-
-      return {
-        'items': items,
-        'subtotal': totalAmount,
-        'shipping': 0.0,
-        'total': totalAmount,
-      };
-    } else {
-      throw Exception(result['message'] ?? 'Failed to fetch cart');
-    }
   }
 
   Future<int> addToCart({

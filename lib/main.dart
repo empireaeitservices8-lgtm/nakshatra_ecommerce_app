@@ -5,28 +5,25 @@ import 'config/app_config.dart';
 import 'helpers/sp_helper.dart';
 import 'providers/cart_provider.dart';
 import 'providers/language_provider.dart';
+import 'providers/loading_provider.dart';
 import 'providers/theme_provider.dart';
+import 'screens/splashscreen.dart';
 import 'utils/routes.dart';
 import 'utils/themes.dart';
-
-// Feature ViewModels
-import 'features/splashscreen/view/splashscreen.dart';
-import 'features/splashscreen/view_model/splash_view_model.dart';
-import 'features/auth/view_model/auth_viewmodel.dart';
-import 'features/dashboard/view_model/dashboard_viewmodel.dart';
-import 'features/devices/view_model/device_viewmodel.dart';
-import 'features/device_groups/view_model/device_group_viewmodel.dart';
-import 'features/users/view_model/user_viewmodel.dart';
-import 'features/cart/view_model/cart_viewmodel.dart';
-import 'features/products/view_model/product_viewmodel.dart';
-import 'features/wishlist/view_model/wishlist_viewmodel.dart';
-import 'features/checkout/view_model/address_viewmodel.dart';
-import 'features/checkout/view_model/payment_viewmodel.dart';
-import 'features/orders/view_model/order_viewmodel.dart';
-import 'features/reviews/view_model/review_viewmodel.dart';
-import 'features/profile/view_model/referral_viewmodel.dart';
-import 'features/notifications/view_model/notification_viewmodel.dart';
-import 'features/gold_scheme/view_model/gold_scheme_viewmodel.dart';
+import 'viewmodels/address_viewmodel.dart';
+import 'viewmodels/auth_viewmodel.dart';
+import 'viewmodels/cart_viewmodel.dart';
+import 'viewmodels/gold_scheme_viewmodel.dart';
+import 'viewmodels/help_center_viewmodel.dart';
+import 'viewmodels/notification_viewmodel.dart';
+import 'viewmodels/order_viewmodel.dart';
+import 'viewmodels/payment_viewmodel.dart';
+import 'viewmodels/product_viewmodel.dart';
+import 'viewmodels/referral_viewmodel.dart';
+import 'viewmodels/review_viewmodel.dart';
+import 'viewmodels/splash_view_model.dart';
+import 'viewmodels/wishlist_viewmodel.dart';
+import 'widgets/global_loading_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,12 +34,9 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
+        ChangeNotifierProvider(create: (context) => LoadingProvider()),
         ChangeNotifierProvider(create: (context) => SplashViewModel()),
         ChangeNotifierProvider(create: (context) => AuthViewModel()),
-        ChangeNotifierProvider(create: (context) => DashboardViewModel()),
-        ChangeNotifierProvider(create: (context) => DeviceViewModel()),
-        ChangeNotifierProvider(create: (context) => DeviceGroupViewModel()),
-        ChangeNotifierProvider(create: (context) => UserViewModel()),
         ChangeNotifierProvider(create: (context) => CartProvider()),
         ChangeNotifierProvider(create: (context) => CartViewModel()),
         ChangeNotifierProvider(create: (context) => ProductViewModel()),
@@ -54,6 +48,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => ReferralViewModel()),
         ChangeNotifierProvider(create: (context) => NotificationViewModel()),
         ChangeNotifierProvider(create: (context) => GoldSchemeViewModel()),
+        ChangeNotifierProvider(create: (context) => HelpCenterViewModel()),
       ],
       child: const NakshathraApp(),
     ),
@@ -77,6 +72,9 @@ class NakshathraApp extends StatelessWidget {
       initialRoute: SplashScreen.path,
       routes: appRoutes(),
       onGenerateRoute: onAppGenerateRoute,
+      builder: (context, child) {
+        return GlobalLoadingOverlay(child: child);
+      },
     );
   }
 }

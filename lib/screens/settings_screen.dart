@@ -1,8 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// ignore_for_file: duplicate_ignore, deprecated_member_use
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:nakshatra_app/screens/cart_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../viewmodels/auth_viewmodel.dart';
 import '../providers/cart_provider.dart';
-import 'cart_screen.dart';
+import 'help_center_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   static const String path = '/settings';
@@ -22,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   Color get _goldDark => const Color(0xFFB8860B);
   Color get _goldMid => const Color(0xFFD4A017);
   Color get _goldLight => const Color(0xFFFFD700);
-  Color get _goldShine => const Color(0xFFFFF0A0);
   Color get _bgCream => Provider.of<CartProvider>(context).isDarkMode
       ? const Color(0xFF121212)
       : const Color(0xFFFAF6EF);
@@ -130,7 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildAppBar(BuildContext context) {
     return SliverAppBar(
       pinned: true,
-      backgroundColor: _goldDark,
+      backgroundColor: const Color(0xFF14241B),
       elevation: 0,
       automaticallyImplyLeading: false,
       leading: Navigator.canPop(context)
@@ -152,9 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
       ),
       actions: [
-        Center(
-          child: _buildCartIconWithBadge(context),
-        ),
+        Center(child: _buildCartIconWithBadge(context)),
         const SizedBox(width: 16),
       ],
       flexibleSpace: Container(
@@ -163,12 +166,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFB8860B),
-              Color(0xFFD4A017),
-              Color(0xFFFFD700),
-              Color(0xFFD4A017),
+              Color(0xFF14241B), // Luxury deep emerald
+              Color(0xFF2E513D), // Emerald green
+              Color(0xFF1A3828), // Deep emerald
             ],
-            stops: [0.0, 0.35, 0.65, 1.0],
           ),
         ),
       ),
@@ -212,6 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
+            // ignore: deprecated_member_use
             color: _goldMid.withOpacity(0.10),
             blurRadius: 16,
             offset: const Offset(0, 4),
@@ -500,7 +502,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         title: 'Privacy Policy',
         subtitle: 'How we handle your data',
         icon: Icons.policy_outlined,
-        onTap: () {},
+        onTap: () => _launchUrl('https://www.nakshathra.store/privacy-policy'),
         isLast: true,
       ),
     ]);
@@ -542,7 +544,12 @@ class _SettingsScreenState extends State<SettingsScreen>
         title: 'Help Center',
         subtitle: 'FAQs & guides',
         icon: Icons.help_outline_rounded,
-        onTap: () {},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const HelpCenterScreen()),
+          );
+        },
       ),
       _arrowTile(
         title: 'Chat with Us',
@@ -744,6 +751,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       confirmText: 'Logout',
       confirmColor: _dangerRed,
       onConfirm: () {
+        Provider.of<AuthViewModel>(context, listen: false).logout();
         Navigator.of(
           context,
         ).pushNamedAndRemoveUntil('/login', (route) => false);
@@ -760,10 +768,43 @@ class _SettingsScreenState extends State<SettingsScreen>
           'This will permanently delete your account and all your data. This action cannot be undone.',
       confirmText: 'Delete',
       confirmColor: _dangerRed,
-      onConfirm: () {
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/login', (route) => false);
+      onConfirm: () async {
+        final authVM = Provider.of<AuthViewModel>(context, listen: false);
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context);
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()),
+        );
+
+        final success = await authVM.deleteAccount();
+
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading
+        }
+
+        if (success) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Account deleted/deactivated successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          nav.pushNamedAndRemoveUntil('/login', (route) => false);
+        } else {
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                authVM.errorMessage?.isNotEmpty == true
+                    ? authVM.errorMessage!
+                    : 'Failed to delete account',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       },
     );
   }
@@ -872,5 +913,28 @@ class _SettingsScreenState extends State<SettingsScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      if (mounted) {
+        Clipboard.setData(ClipboardData(text: url));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open link. Copied to clipboard: $url'),
+            backgroundColor: _goldDark,
+          ),
+        );
+      }
+    }
   }
 }

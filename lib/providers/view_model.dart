@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/app_error_model.dart';
 import '_base.dart';
+import 'loading_provider.dart';
 
 enum ViewState { idle, busy, error }
 
@@ -22,8 +23,15 @@ abstract class BaseViewModel extends BaseProvider {
     notifyListeners();
   }
 
-  void setBusy(bool value) {
+  void setBusy(bool value, {bool global = false, String? message}) {
     _state = value ? ViewState.busy : ViewState.idle;
+    if (global) {
+      if (value) {
+        LoadingService.show(message: message);
+      } else {
+        LoadingService.hide();
+      }
+    }
     notifyListeners();
   }
 

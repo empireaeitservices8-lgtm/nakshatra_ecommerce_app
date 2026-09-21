@@ -1,1 +1,1 @@
-export '../../features/gold_scheme/view_model/gold_scheme_viewmodel.dart';
+export '../../viewmodels/gold_scheme_viewmodel.dart';

@@ -49,8 +49,89 @@ class ProductDetail {
     required this.image,
   });
 
-  factory ProductDetail.fromJson(Map<String, dynamic> json) =>
-      _$ProductDetailFromJson(json);
+  factory ProductDetail.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'] ?? json['product_id'] ?? 0;
+    final int id = rawId is num
+        ? rawId.toInt()
+        : (int.tryParse(rawId.toString()) ?? 0);
+
+    final String name =
+        (json['name'] ?? json['product_name'] ?? json['title'] ?? '')
+            .toString();
+    final String description = (json['description'] ?? '').toString();
+
+    final rawPrice = json['price'];
+    final double price = rawPrice is num
+        ? rawPrice.toDouble()
+        : (double.tryParse(rawPrice?.toString() ?? '') ?? 0.0);
+
+    final rawOrigPrice = json['original_price'];
+    final double originalPrice = rawOrigPrice is num
+        ? rawOrigPrice.toDouble()
+        : (double.tryParse(rawOrigPrice?.toString() ?? '') ?? price);
+
+    final rawDiscount = json['discount_percentage'];
+    final int discountPercentage = rawDiscount is num
+        ? rawDiscount.toInt()
+        : (int.tryParse(rawDiscount?.toString() ?? '') ?? 0);
+
+    final String currency = (json['currency'] ?? 'INR').toString();
+    final String currencySymbol = (json['currency_symbol'] ?? '₹').toString();
+
+    final String? purity = json['purity']?.toString();
+    final rawPurityPct = json['purity_percentage'];
+    final double? purityPercentage = rawPurityPct is num
+        ? rawPurityPct.toDouble()
+        : double.tryParse(rawPurityPct?.toString() ?? '');
+
+    final rawStock = json['total_stock'] ?? json['stock'];
+    final double totalStockNum = rawStock is num
+        ? rawStock.toDouble()
+        : (double.tryParse(rawStock?.toString() ?? '') ?? 0.0);
+    final int totalStock = totalStockNum.ceil();
+
+    final availableLocations =
+        json['available_locations'] as List<dynamic>? ?? const [];
+
+    final rawRating = json['rating'];
+    final double rating = rawRating is num
+        ? rawRating.toDouble()
+        : (double.tryParse(rawRating?.toString() ?? '') ?? 0.0);
+
+    final rawReviews = json['reviews_count'];
+    final int reviewsCount = rawReviews is num
+        ? rawReviews.toInt()
+        : (int.tryParse(rawReviews?.toString() ?? '') ?? 0);
+
+    final bool inWishlist = json['in_wishlist'] == true;
+
+    final image =
+        json['image_url'] ??
+        json['image'] ??
+        json['image_path'] ??
+        (json['images'] is List && (json['images'] as List).isNotEmpty
+            ? json['images'][0]
+            : null);
+
+    return ProductDetail(
+      id: id,
+      name: name,
+      description: description,
+      price: price,
+      originalPrice: originalPrice,
+      discountPercentage: discountPercentage,
+      currency: currency,
+      currencySymbol: currencySymbol,
+      purity: purity,
+      purityPercentage: purityPercentage,
+      totalStock: totalStock,
+      availableLocations: availableLocations,
+      rating: rating,
+      reviewsCount: reviewsCount,
+      inWishlist: inWishlist,
+      image: image,
+    );
+  }
 
   Map<String, dynamic> toJson() => _$ProductDetailToJson(this);
 

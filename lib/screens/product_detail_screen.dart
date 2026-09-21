@@ -1,9 +1,12 @@
+// ignore_for_file: duplicate_ignore, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nakshatra_app/models/cart_item.dart';
 import 'package:provider/provider.dart';
 
 import '../helpers/cart_animation_helper.dart';
+import '../helpers/toast_helper.dart';
 import '../models/product.dart';
 import '../viewmodels/cart_viewmodel.dart';
 import '../viewmodels/wishlist_viewmodel.dart';
@@ -42,10 +45,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authVM = Provider.of<AuthViewModel>(context, listen: false);
+      final customerId = authVM.currentUser?.id ?? '1';
       Provider.of<ProductViewModel>(
         context,
         listen: false,
-      ).fetchProductDetail(widget.productId);
+      ).fetchProductDetail(widget.productId, customerId: customerId);
     });
   }
 
@@ -61,7 +66,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Image.asset(
+        cacheWidth: 600,
+        cacheHeight: 600,
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/images/product1.png',
           width: width,
           height: height,
@@ -74,7 +81,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Image.asset(
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/images/product1.png',
           width: width,
           height: height,
@@ -157,6 +164,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
+                            // ignore: deprecated_member_use
                             color: Colors.black.withOpacity(0.04),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
@@ -184,12 +192,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       GestureDetector(
                         onTap: () async {
                           if (favorited) {
-                            await wishlistVM.removeFromWishlist(
+                            final success = await wishlistVM.removeFromWishlist(
                               customerId,
                               widget.productId,
                             );
+                            if (context.mounted) {
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Removed from Wishlist"),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      wishlistVM.errorMessage ??
+                                          "Failed to remove from Wishlist",
+                                    ),
+                                    backgroundColor: Colors.red.shade800,
+                                  ),
+                                );
+                              }
+                            }
                           } else {
-                            await wishlistVM.addToWishlist(
+                            final success = await wishlistVM.addToWishlist(
                               customerId,
                               Product(
                                 id: widget.productId,
@@ -203,6 +231,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 gender: '',
                               ),
                             );
+                            if (context.mounted) {
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Added to Wishlist"),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      wishlistVM.errorMessage ??
+                                          "Failed to add to Wishlist",
+                                    ),
+                                    backgroundColor: Colors.red.shade800,
+                                  ),
+                                );
+                              }
+                            }
                           }
                         },
                         child: Container(
@@ -334,7 +382,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 );
                                 if (index == 0) {
                                   return Hero(
-                                    tag: widget.heroTag ?? 'product_${widget.productId}',
+                                    tag:
+                                        widget.heroTag ??
+                                        'product_${widget.productId}',
                                     child: imageWidget,
                                   );
                                 }
@@ -442,11 +492,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               Center(
                                 child: Column(
                                   children: [
-                                    const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                                    const Icon(
+                                      Icons.error_outline,
+                                      color: Colors.red,
+                                      size: 40,
+                                    ),
                                     const SizedBox(height: 10),
                                     Text(
                                       "Error loading details",
-                                      style: GoogleFonts.poppins(color: textDark),
+                                      style: GoogleFonts.poppins(
+                                        color: textDark,
+                                      ),
                                     ),
                                     const SizedBox(height: 10),
                                     ElevatedButton(
@@ -457,9 +513,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                         ).fetchProductDetail(widget.productId);
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF2E513D),
+                                        backgroundColor: const Color(
+                                          0xFF2E513D,
+                                        ),
                                       ),
-                                      child: const Text("Retry", style: TextStyle(color: Colors.white)),
+                                      child: const Text(
+                                        "Retry",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -474,7 +535,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ),
                                   ),
                                 ),
-                              )
+                              ),
                           ] else ...[
                             // Specifications Grid
                             Row(
@@ -628,7 +689,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -640,15 +703,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               inStock: inStock,
                               onAdd: () async {
                                 if (!inStock) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text("There is no stock available."),
-                                      backgroundColor: Colors.red.shade800,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
+                                  ToastHelper.showErrorToast(
+                                    context,
+                                    "This item is currently out of stock.",
                                   );
                                   return;
                                 }
@@ -680,7 +737,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 if (!success && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(cartVM.errorMessage ?? "Failed to add item to Bag"),
+                                      content: Text(
+                                        cartVM.errorMessage ??
+                                            "Failed to add item to Bag",
+                                      ),
                                       backgroundColor: Colors.red.shade800,
                                       behavior: SnackBarBehavior.floating,
                                       shape: RoundedRectangleBorder(
@@ -719,7 +779,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     Color? color,
   }) {
     final boxBg = isDark ? const Color(0xFF262626) : Colors.white;
-    final titleCol = isDark ? Colors.white : const Color(0xFF2C1A00);
     final detailCol =
         color ?? (isDark ? const Color(0xFFD4AF37) : const Color(0xFFB8860B));
 

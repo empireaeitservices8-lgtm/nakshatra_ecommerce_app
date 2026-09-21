@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -91,8 +93,8 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
         child: productVM.isLoading
             ? _buildLoadingGrid()
             : filteredList.isEmpty
-                ? _buildEmptyState(textMuted)
-                : _buildProductGrid(filteredList, textMuted),
+            ? _buildEmptyState(textMuted)
+            : _buildProductGrid(filteredList, textMuted),
       ),
     );
   }
@@ -102,7 +104,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.59,
+        childAspectRatio: 0.72,
         crossAxisSpacing: 15,
         mainAxisSpacing: 15,
       ),
@@ -153,10 +155,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Text(
             '${products.length} product${products.length == 1 ? '' : 's'} found',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: textMuted,
-            ),
+            style: GoogleFonts.poppins(fontSize: 13, color: textMuted),
           ),
         ),
         Expanded(
@@ -164,7 +163,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 0.59,
+              childAspectRatio: 0.72,
               crossAxisSpacing: 14,
               mainAxisSpacing: 14,
             ),

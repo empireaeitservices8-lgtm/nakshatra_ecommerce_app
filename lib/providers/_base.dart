@@ -12,9 +12,7 @@ abstract class BaseProvider extends ChangeNotifier {
   String? get providerName => _providerName;
   bool get isDisposed => _isDisposed;
 
-  BaseProvider({String? name})
-      : _providerName = name,
-        super();
+  BaseProvider({String? name}) : _providerName = name, super();
 
   int get deviceType {
     if (Platform.isAndroid) return 1;
@@ -44,7 +42,7 @@ abstract class BaseProvider extends ChangeNotifier {
 abstract class BaseSimpleAPIProvider<M> extends BaseProvider
     with MixinAPIProvider, MixinProgressProvider {
   BaseSimpleAPIProvider({String? name})
-      : super(name: name ?? "BaseSimpleAPIProvider");
+    : super(name: name ?? "BaseSimpleAPIProvider");
 
   M? _iModel;
   M? get iModel => _iModel;
@@ -88,11 +86,10 @@ abstract class BaseListLoadMoreProvider<IM> extends BaseProvider
     with MixinAPIProvider, MixinProgressProvider {
   final List<IM> _list = [];
   int _page = 1;
-  int _totalPages = 1;
   bool _isAllCompleted = false;
 
   BaseListLoadMoreProvider({String? name})
-      : super(name: name ?? "BaseListLoadMoreProvider");
+    : super(name: name ?? "BaseListLoadMoreProvider");
 
   List<IM> get list => _list;
   int get currentPage => _page;

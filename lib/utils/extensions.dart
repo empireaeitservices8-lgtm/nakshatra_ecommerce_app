@@ -13,7 +13,8 @@ extension APIFutureExtension<T> on Future<T> {
   }
 
   Future<T> handleAPIException({
-    required Function(APIException ex, {OnShowError? onShowError}) handleAPIException,
+    required Function(APIException ex, {OnShowError? onShowError})
+    handleAPIException,
     OnShowError? onShowError,
     VoidCallback? onInvalidToken,
   }) {
@@ -24,10 +25,9 @@ extension APIFutureExtension<T> on Future<T> {
         }
         handleAPIException(err, onShowError: onShowError);
       } else {
-        onShowError?.call(AppError(
-          message: err.toString(),
-          originalError: err,
-        ));
+        onShowError?.call(
+          AppError(message: err.toString(), originalError: err),
+        );
       }
       throw err;
     });
@@ -48,6 +48,7 @@ extension WidgetProgressExtension on Widget {
           Positioned.fill(
             child: Container(
               alignment: Alignment.center,
+              // ignore: deprecated_member_use
               color: Colors.black.withOpacity(bgOpacity),
               child: const AppProgressWidget(),
             ),
@@ -71,7 +72,11 @@ extension WidgetProgressExtension on Widget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     text,
@@ -113,7 +118,9 @@ extension BuildContextExtension on BuildContext {
     ScaffoldMessenger.of(this).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red.shade700 : const Color(0xFF0A4D3C),
+        backgroundColor: isError
+            ? Colors.red.shade700
+            : const Color(0xFF0A4D3C),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),

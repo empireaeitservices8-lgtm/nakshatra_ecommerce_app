@@ -6,23 +6,83 @@ class OrderRepository {
 
   Future<List<Order>> getOrders({required String customerId}) async {
     final response = await _apiService.post(
-      '/order/view',
+      '/orders',
       data: {
         'params': {'customer_id': int.tryParse(customerId) ?? 1},
       },
     );
 
     final resData = response.data;
-    final result = resData['result'];
+    final result = resData is Map ? (resData['result'] ?? resData) : null;
     if (result == null) throw Exception('Invalid server response');
 
     if (result['status'] == 200 ||
         result['status'] == 'success' ||
-        result['success'] == true) {
-      final list = result['data'] as List? ?? [];
-      return list.map((item) => Order.fromJson(item)).toList();
+        result['success'] == true ||
+        result['data'] != null) {
+      final list = (result['data'] as List?) ?? (result['orders'] as List?) ?? [];
+      return list.map((item) => Order.fromJson(item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item))).toList();
     } else {
       throw Exception(result['message'] ?? 'Failed to fetch orders');
+    }
+  }
+
+  Future<Map<String, dynamic>> checkout({
+    required String customerId,
+    String paymentMethod = 'cash',
+    required String shippingAddress,
+    required String shippingCity,
+    required String shippingPhone,
+    String? notes,
+  }) async {
+    final response = await _apiService.post(
+      '/checkout',
+      data: {
+        'jsonrpc': '2.0',
+        'method': 'call',
+        'params': {
+          'customer_id': int.tryParse(customerId) ?? 1,
+          'payment_method': paymentMethod.toLowerCase() == 'cod' ||
+                  paymentMethod.toLowerCase() == 'cash on delivery' ||
+                  paymentMethod.toLowerCase() == 'cash'
+              ? 'cash'
+              : 'cash',
+          'shipping_address': shippingAddress,
+          'shipping_city': shippingCity.isNotEmpty ? shippingCity : 'Calicut',
+          'shipping_phone': shippingPhone,
+          if (notes != null && notes.isNotEmpty) 'notes': notes,
+        },
+        'id': 1,
+      },
+    );
+
+    final resData = response.data;
+    final result = resData is Map ? (resData['result'] ?? resData) : null;
+    if (result == null) throw Exception('Invalid server response');
+
+    if (result['status'] == 'error' ||
+        result['status'] == 400 ||
+        result['status'] == 500) {
+      throw Exception(result['message'] ?? 'Checkout failed');
+    }
+
+    if (result['status'] == 200 ||
+        result['status'] == 'success' ||
+        result['success'] == true ||
+        result['order_id'] != null ||
+        result['data'] != null) {
+      return result is Map<String, dynamic>
+          ? result
+          : Map<String, dynamic>.from(result);
+    } else {
+      if (result['message'] != null && result['status'] == null) {
+        return result is Map<String, dynamic>
+            ? result
+            : Map<String, dynamic>.from(result);
+      }
+      return result is Map<String, dynamic>
+          ? result
+          : Map<String, dynamic>.from(result);
     }
   }
 
@@ -30,35 +90,21 @@ class OrderRepository {
     required String customerId,
     required String addressId,
     required String paymentMethod,
+    String? shippingAddress,
+    String? shippingCity,
+    String? shippingPhone,
+    String? notes,
     String? cardId,
     String? couponCode,
   }) async {
-    final response = await _apiService.post(
-      '/order/add',
-      data: {
-        'params': {
-          'customer_id': int.tryParse(customerId) ?? 1,
-          'address_id': int.tryParse(addressId) ?? 0,
-          'payment_method': paymentMethod,
-          if (cardId != null && cardId.isNotEmpty)
-            'card_id': int.tryParse(cardId) ?? 0,
-          if (couponCode != null && couponCode.isNotEmpty)
-            'coupon_code': couponCode,
-        },
-      },
+    return checkout(
+      customerId: customerId,
+      paymentMethod: paymentMethod,
+      shippingAddress: shippingAddress ?? '',
+      shippingCity: shippingCity ?? 'Calicut',
+      shippingPhone: shippingPhone ?? '',
+      notes: notes,
     );
-
-    final resData = response.data;
-    final result = resData['result'];
-    if (result == null) throw Exception('Invalid server response');
-
-    if (result['status'] == 200 ||
-        result['status'] == 'success' ||
-        result['success'] == true) {
-      return result['data'] ?? result;
-    } else {
-      throw Exception(result['message'] ?? 'Failed to place order');
-    }
   }
 
   Future<Map<String, dynamic>> getOrderDetail({

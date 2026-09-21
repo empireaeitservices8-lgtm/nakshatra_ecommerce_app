@@ -1,10 +1,11 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodels/cart_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import '../models/cart_item.dart';
 import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
@@ -44,7 +45,9 @@ class _CartScreenState extends State<CartScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Image.asset(
+        cacheWidth: 200,
+        cacheHeight: 200,
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/images/product1.png',
           width: width,
           height: height,
@@ -57,7 +60,7 @@ class _CartScreenState extends State<CartScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Image.asset(
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/images/product1.png',
           width: width,
           height: height,
@@ -143,6 +146,8 @@ class _CartScreenState extends State<CartScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
+                              // ignore: duplicate_ignore
+                              // ignore: deprecated_member_use
                               color: Colors.black.withOpacity(0.03),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
@@ -270,6 +275,7 @@ class _CartScreenState extends State<CartScreen> {
                                               item.id,
                                             );
                                             ScaffoldMessenger.of(
+                                              // ignore: use_build_context_synchronously
                                               context,
                                             ).showSnackBar(
                                               SnackBar(

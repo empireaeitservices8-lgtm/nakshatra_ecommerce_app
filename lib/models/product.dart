@@ -120,10 +120,12 @@ class Product {
       weightGrams: (map['weight_grams'] ?? map['weightGrams'] ?? 0.0)
           .toDouble(),
       purity: (map['purity'] ?? '22K').toString(),
-      inStock: map['in_stock'] ??
+      inStock:
+          map['in_stock'] ??
           map['inStock'] ??
           (() {
-            final stockVal = map['total_stock'] ?? map['totalStock'] ?? map['stock'];
+            final stockVal =
+                map['total_stock'] ?? map['totalStock'] ?? map['stock'];
             if (stockVal == null) return true;
             if (stockVal is num) return stockVal > 0;
             return (double.tryParse(stockVal.toString()) ?? 1.0) > 0;
@@ -140,13 +142,19 @@ class Product {
     String name = rawName;
     if (name.isNotEmpty) {
       name = name.replaceAll('(', ' (');
-      name = name.split(RegExp(r'\s+')).map((word) {
-        if (word.isEmpty) return '';
-        if (word.startsWith('(')) {
-          return '(' + word.substring(1).toUpperCase();
-        }
-        return word[0].toUpperCase() + word.substring(1).toLowerCase();
-      }).join(' ').replaceAll(' (', ' (').trim();
+      name = name
+          .split(RegExp(r'\s+'))
+          .map((word) {
+            if (word.isEmpty) return '';
+            if (word.startsWith('(')) {
+              // ignore: prefer_interpolation_to_compose_strings
+              return '(' + word.substring(1).toUpperCase();
+            }
+            return word[0].toUpperCase() + word.substring(1).toLowerCase();
+          })
+          .join(' ')
+          .replaceAll(' (', ' (')
+          .trim();
     }
 
     // Format price safely with currency symbol
@@ -171,7 +179,8 @@ class Product {
     }
 
     // Format image URL
-    String imgUrl = json['image_url'] ?? json['imagePath'] ?? json['image_path'] ?? '';
+    String imgUrl =
+        json['image_url'] ?? json['imagePath'] ?? json['image_path'] ?? '';
     if (imgUrl.startsWith('/')) {
       imgUrl = 'http://100.52.86.195:8069$imgUrl';
     }
@@ -189,7 +198,8 @@ class Product {
         categoryName = 'Bracelets';
       } else if (lowerName.contains('earring') || lowerName.contains('stud')) {
         categoryName = 'Earrings';
-      } else if (lowerName.contains('chain') || lowerName.contains('necklace')) {
+      } else if (lowerName.contains('chain') ||
+          lowerName.contains('necklace')) {
         categoryName = 'Necklaces';
       } else if (lowerName.contains('wedding') || lowerName.contains('set')) {
         categoryName = 'Wedding Sets';
@@ -210,7 +220,8 @@ class Product {
     }
 
     // Extract weight from location_stocks if missing from root
-    double weight = (json['weight_grams'] ?? json['weightGrams'] ?? 0.0).toDouble();
+    double weight = (json['weight_grams'] ?? json['weightGrams'] ?? 0.0)
+        .toDouble();
     if (weight == 0.0) {
       final locStocks = json['location_stocks'];
       if (locStocks is List && locStocks.isNotEmpty) {
@@ -236,7 +247,8 @@ class Product {
 
     String dynamicDesc = desc;
     if (dynamicDesc.isEmpty) {
-      dynamicDesc = 'Exclusive premium ${name.toLowerCase()} crafted with perfection in $purity gold.';
+      dynamicDesc =
+          'Exclusive premium ${name.toLowerCase()} crafted with perfection in $purity gold.';
       if (weight > 0) {
         dynamicDesc += ' Item weight is ${weight.toStringAsFixed(2)} grams.';
       }
@@ -253,10 +265,12 @@ class Product {
       description: dynamicDesc,
       weightGrams: weight,
       purity: purity,
-      inStock: json['in_stock'] ??
+      inStock:
+          json['in_stock'] ??
           json['inStock'] ??
           (() {
-            final stockVal = json['total_stock'] ?? json['totalStock'] ?? json['stock'];
+            final stockVal =
+                json['total_stock'] ?? json['totalStock'] ?? json['stock'];
             if (stockVal == null) return true;
             if (stockVal is num) return stockVal > 0;
             return (double.tryParse(stockVal.toString()) ?? 1.0) > 0;

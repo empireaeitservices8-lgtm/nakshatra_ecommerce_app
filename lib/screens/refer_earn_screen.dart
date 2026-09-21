@@ -36,11 +36,17 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     final cardWhite = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
 
+    final authVM = Provider.of<AuthViewModel>(context);
     final referralVM = Provider.of<ReferralViewModel>(context);
     final refInfo = referralVM.referralInfo;
-    final refCode = refInfo?.referralCode ?? 'NAKSH-SHINE-77';
-    final friendsInvited = refInfo?.referredCount.toString() ?? '0';
-    final rewardsEarned = '₹${refInfo?.rewardsEarnedInr.toStringAsFixed(2) ?? '0.00'}';
+    final refCode = (refInfo?.referralCode.isNotEmpty == true)
+        ? refInfo!.referralCode
+        : (authVM.currentUser?.referralCode.isNotEmpty == true
+            ? authVM.currentUser!.referralCode
+            : 'NAKSH-SHINE-74');
+    final friendsInvited = (refInfo?.friendsInvited ?? refInfo?.referredCount ?? 0).toString();
+    final goldEarnedVal = refInfo?.goldEarned ?? refInfo?.rewardsEarnedInr ?? 0.0;
+    final rewardsEarned = '₹${goldEarnedVal.toStringAsFixed(2)}';
 
     return Scaffold(
       backgroundColor: bgCream,
@@ -206,14 +212,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                   ),
                   const SizedBox(height: 35),
                   ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Sharing referral link..."),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
+                    onPressed: () => _showInviteDialog(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _emeraldGreen,
                       minimumSize: const Size(double.infinity, 50),
@@ -235,6 +234,181 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  void _showInviteDialog(BuildContext context) {
+    final emailCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final isDark = Provider.of<CartProvider>(context, listen: false).isDarkMode;
+    final cardWhite = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+    final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: cardWhite,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  "Invite a Friend",
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Send an exclusive referral invitation to earn gold rewards",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  style: GoogleFonts.poppins(color: textDark, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: "Friend's Email",
+                    prefixIcon: const Icon(Icons.email_outlined, color: _goldDark),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: _goldDark, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  style: GoogleFonts.poppins(color: textDark, fontSize: 14),
+                  decoration: InputDecoration(
+                    labelText: "Friend's Phone",
+                    prefixIcon: const Icon(Icons.phone_outlined, color: _goldDark),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: _goldDark, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15),
+                    gradient: const LinearGradient(
+                      colors: [_emeraldGreen, Color(0xFF1B382A)],
+                    ),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final email = emailCtrl.text.trim();
+                      final phone = phoneCtrl.text.trim();
+
+                      if (email.isEmpty && phone.isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text("Please enter at least an email or phone number"),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                        return;
+                      }
+
+                      final customerId = Provider.of<AuthViewModel>(
+                        context,
+                        listen: false,
+                      ).currentUser?.id ?? '1';
+
+                      final referralVM = Provider.of<ReferralViewModel>(
+                        context,
+                        listen: false,
+                      );
+
+                      final success = await referralVM.inviteFriend(
+                        customerId: customerId,
+                        friendEmail: email.isNotEmpty ? email : "friend@example.com",
+                        friendPhone: phone.isNotEmpty ? phone : "+919876543210",
+                      );
+
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Referral invitation recorded successfully!"),
+                              backgroundColor: _emeraldGreen,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                referralVM.errorMessage ?? "Failed to send referral invitation",
+                              ),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    child: Text(
+                      "Send Invitation",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 15),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

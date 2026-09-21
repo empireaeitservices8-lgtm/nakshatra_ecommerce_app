@@ -1,3 +1,5 @@
+// ignore_for_file: duplicate_ignore, use_build_context_synchronously, deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -27,19 +29,27 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-      Provider.of<GoldSchemeViewModel>(context, listen: false).fetchSchemeDetails(customerId);
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<GoldSchemeViewModel>(
+        context,
+        listen: false,
+      ).fetchSchemeDetails(customerId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final schemeVM = Provider.of<GoldSchemeViewModel>(context);
-    final customerId = Provider.of<AuthViewModel>(context).currentUser?.id ?? '1';
+    final customerId =
+        Provider.of<AuthViewModel>(context).currentUser?.id ?? '1';
     final isDark = Provider.of<CartProvider>(context).isDarkMode;
 
     final bgCream = isDark ? const Color(0xFF121212) : const Color(0xFFFAF6EF);
-    final cardWhite = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+    final cardWhite = isDark
+        ? const Color(0xFF1E1E1E)
+        : const Color(0xFFFFFFFF);
     final textDark = isDark ? Colors.white : const Color(0xFF2C1A00);
     final textMuted = isDark ? Colors.white60 : Colors.black54;
 
@@ -63,7 +73,9 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
         centerTitle: true,
       ),
       body: schemeVM.isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFD4A017)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFD4A017)),
+            )
           : RefreshIndicator(
               onRefresh: () async {
                 await schemeVM.fetchSchemeDetails(customerId);
@@ -71,10 +83,27 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
               color: _goldMid,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 15,
+                ),
                 child: schemeVM.activeScheme != null
-                    ? _buildActiveSchemeView(schemeVM.activeScheme!, customerId, cardWhite, textDark, textMuted, isDark)
-                    : _buildNoSchemeView(schemeVM, customerId, cardWhite, textDark, textMuted, isDark),
+                    ? _buildActiveSchemeView(
+                        schemeVM.activeScheme!,
+                        customerId,
+                        cardWhite,
+                        textDark,
+                        textMuted,
+                        isDark,
+                      )
+                    : _buildNoSchemeView(
+                        schemeVM,
+                        customerId,
+                        cardWhite,
+                        textDark,
+                        textMuted,
+                        isDark,
+                      ),
               ),
             ),
     );
@@ -89,7 +118,7 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
     bool isDark,
   ) {
     final double completionRatio = scheme.monthsPaid / scheme.totalMonths;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -98,11 +127,7 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                _goldDark,
-                _goldMid,
-                _goldAccent.withOpacity(0.9),
-              ],
+              colors: [_goldDark, _goldMid, _goldAccent.withOpacity(0.9)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -112,7 +137,7 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                 color: _goldMid.withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
-              )
+              ),
             ],
           ),
           child: Column(
@@ -130,7 +155,10 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(30),
@@ -143,7 +171,7 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
               const SizedBox(height: 25),
@@ -198,7 +226,9 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                         ),
                       ),
                       Text(
-                        scheme.maturityDate.isNotEmpty ? scheme.maturityDate : "N/A",
+                        scheme.maturityDate.isNotEmpty
+                            ? scheme.maturityDate
+                            : "N/A",
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 14,
@@ -206,15 +236,15 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                         ),
                       ),
                     ],
-                  )
+                  ),
                 ],
-              )
+              ),
             ],
           ),
         ),
-        
+
         const SizedBox(height: 30),
-        
+
         Text(
           "Installment Progress",
           style: GoogleFonts.poppins(
@@ -239,11 +269,19 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                 children: [
                   Text(
                     "Paid: ${scheme.monthsPaid} / ${scheme.totalMonths} months",
-                    style: GoogleFonts.poppins(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.poppins(
+                      color: textColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     "${(completionRatio * 100).toInt()}% Complete",
-                    style: GoogleFonts.poppins(color: _goldDark, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.poppins(
+                      color: _goldDark,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -265,18 +303,28 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
 
         if (scheme.monthsPaid < scheme.totalMonths)
           ElevatedButton(
-            onPressed: () => _handlePayment(context, customerId, scheme.schemeId, scheme.monthlyInstallment),
+            onPressed: () => _handlePayment(
+              context,
+              customerId,
+              scheme.schemeId,
+              scheme.monthlyInstallment,
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: _emeraldGreen,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               minimumSize: const Size(double.infinity, 55),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
               elevation: 4,
             ),
             child: Text(
               "Pay Next Installment (₹${scheme.monthlyInstallment})",
-              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
 
@@ -306,15 +354,22 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: scheme.paymentHistory.length,
+            // ignore: unnecessary_underscores
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final pay = scheme.paymentHistory[index];
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _goldMid.withOpacity(0.1), width: 0.8),
+                  border: Border.all(
+                    color: _goldMid.withOpacity(0.1),
+                    width: 0.8,
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -323,13 +378,22 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          pay.transactionId.isNotEmpty ? "TXN: ${pay.transactionId}" : "Monthly Installment",
-                          style: GoogleFonts.poppins(color: textColor, fontSize: 13, fontWeight: FontWeight.bold),
+                          pay.transactionId.isNotEmpty
+                              ? "TXN: ${pay.transactionId}"
+                              : "Monthly Installment",
+                          style: GoogleFonts.poppins(
+                            color: textColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           pay.date,
-                          style: GoogleFonts.poppins(color: textMutedColor, fontSize: 11),
+                          style: GoogleFonts.poppins(
+                            color: textMutedColor,
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),
@@ -338,15 +402,23 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                       children: [
                         Text(
                           "+₹${pay.amount.toStringAsFixed(2)}",
-                          style: GoogleFonts.poppins(color: _emeraldGreen, fontSize: 14, fontWeight: FontWeight.w800),
+                          style: GoogleFonts.poppins(
+                            color: _emeraldGreen,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           pay.status,
-                          style: GoogleFonts.poppins(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.poppins(
+                            color: Colors.green,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               );
@@ -372,10 +444,7 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                const Color(0xFF2C1A00),
-                _goldDark,
-              ],
+              colors: [const Color(0xFF2C1A00), _goldDark],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -386,22 +455,34 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
             children: [
               Text(
                 "Accumulate Gold Digitally",
-                style: GoogleFonts.playfairDisplay(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                style: GoogleFonts.playfairDisplay(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 "Save monthly installments and redeem ornaments with Zero Making Charges & zero wastage fees at maturity!",
-                style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.85), fontSize: 13, height: 1.5),
+                style: GoogleFonts.poppins(
+                  color: Colors.white.withOpacity(0.85),
+                  fontSize: 13,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
         ),
-        
+
         const SizedBox(height: 30),
 
         Text(
           "Select Monthly Installment Plan",
-          style: GoogleFonts.poppins(color: textColor, fontSize: 16, fontWeight: FontWeight.bold),
+          style: GoogleFonts.poppins(
+            color: textColor,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 15),
 
@@ -420,7 +501,10 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
                 decoration: BoxDecoration(
                   color: isSelected ? _goldMid : cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isSelected ? _goldMid : _goldMid.withOpacity(0.3), width: 1),
+                  border: Border.all(
+                    color: isSelected ? _goldMid : _goldMid.withOpacity(0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Center(
                   child: Text(
@@ -448,11 +532,20 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
           ),
           child: Column(
             children: [
-              _buildBenefitRow(Icons.check_circle_outline, "11 Months installment plan"),
+              _buildBenefitRow(
+                Icons.check_circle_outline,
+                "11 Months installment plan",
+              ),
               const SizedBox(height: 12),
-              _buildBenefitRow(Icons.percent_outlined, "Maturity bonus of up to 1 installment"),
+              _buildBenefitRow(
+                Icons.percent_outlined,
+                "Maturity bonus of up to 1 installment",
+              ),
               const SizedBox(height: 12),
-              _buildBenefitRow(Icons.verified_outlined, "GIA Certified Hallmarked gold ornaments redemption"),
+              _buildBenefitRow(
+                Icons.verified_outlined,
+                "GIA Certified Hallmarked gold ornaments redemption",
+              ),
             ],
           ),
         ),
@@ -460,18 +553,28 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
         const SizedBox(height: 30),
 
         ElevatedButton(
-          onPressed: () => _handlePayment(context, customerId, 1, _selectedInstallmentOption.toDouble()),
+          onPressed: () => _handlePayment(
+            context,
+            customerId,
+            1,
+            _selectedInstallmentOption.toDouble(),
+          ),
           style: ElevatedButton.styleFrom(
             backgroundColor: _goldMid,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             minimumSize: const Size(double.infinity, 55),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
             elevation: 4,
           ),
           child: Text(
             "Subscribe & Pay First Installment",
-            style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
@@ -486,16 +589,24 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        )
+        ),
       ],
     );
   }
 
-  void _handlePayment(BuildContext context, String customerId, int schemeId, double amount) async {
+  void _handlePayment(
+    BuildContext context,
+    String customerId,
+    int schemeId,
+    double amount,
+  ) async {
     final schemeVM = Provider.of<GoldSchemeViewModel>(context, listen: false);
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -522,6 +633,7 @@ class _GoldSchemeScreenState extends State<GoldSchemeScreen> {
       );
     } else {
       ToastHelper.showErrorToast(
+        // ignore: use_build_context_synchronously
         context,
         schemeVM.errorMessage ?? "Payment failed",
       );

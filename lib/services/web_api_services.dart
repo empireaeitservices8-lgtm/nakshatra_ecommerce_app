@@ -1,13 +1,18 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../config/app_config.dart';
+import '../screens/login_screen.dart';
+import '../helpers/toast_helper.dart';
 import '../helpers/url_helpers.dart';
 import '../helpers/sp_helper.dart';
 import '../models/app_error_model.dart';
 import '../providers/_mixins.dart';
+import '../providers/loading_provider.dart';
 import '../utils/extensions.dart';
 import '_mixins_api.dart';
 import 'api_logger.dart';
+import 'token_manager.dart';
 
 class WebAPIService with WebAPIMixin, MixinAPIProvider {
   static final WebAPIService _instance = WebAPIService._internal();
@@ -30,7 +35,31 @@ class WebAPIService with WebAPIMixin, MixinAPIProvider {
       ),
     );
 
-    // Dynamic Auth Token Interceptor
+    // Global Network Progress / Loading Interceptor
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (options.extra['silent'] != true) {
+            LoadingService.show(message: options.extra['loadingMessage'] as String?);
+          }
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          if (response.requestOptions.extra['silent'] != true) {
+            LoadingService.hide();
+          }
+          return handler.next(response);
+        },
+        onError: (DioException error, handler) {
+          if (error.requestOptions.extra['silent'] != true) {
+            LoadingService.hide();
+          }
+          return handler.next(error);
+        },
+      ),
+    );
+
+    // Dynamic Auth Token Interceptor + Global Unauthenticated / 404 Interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -39,6 +68,40 @@ class WebAPIService with WebAPIMixin, MixinAPIProvider {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
+        },
+        onError: (DioException error, handler) async {
+          final statusCode = error.response?.statusCode;
+          final responseData = error.response?.data;
+
+          bool isUnauthenticated = statusCode == 401 || statusCode == 403;
+          if (!isUnauthenticated && responseData is Map) {
+            final msg = (responseData['message'] ?? responseData['error'] ?? '').toString().toLowerCase();
+            if (msg.contains('unauthenticated') ||
+                msg.contains('unauthorized') ||
+                msg.contains('session expired') ||
+                msg.contains('invalid token')) {
+              isUnauthenticated = true;
+            }
+          }
+
+          if (isUnauthenticated) {
+            TokenManager.clear();
+            final context = AppConfig.navKey.currentContext;
+            if (context != null) {
+              ToastHelper.showErrorToast(context, 'Session expired or unauthenticated. Please log in.');
+              AppConfig.navKey.currentState?.pushNamedAndRemoveUntil(
+                LoginScreen.routeName,
+                (route) => false,
+              );
+            }
+          } else if (statusCode == 404) {
+            final context = AppConfig.navKey.currentContext;
+            if (context != null) {
+              ToastHelper.showErrorToast(context, 'Resource not found (404)');
+            }
+          }
+
+          return handler.next(error);
         },
       ),
     );

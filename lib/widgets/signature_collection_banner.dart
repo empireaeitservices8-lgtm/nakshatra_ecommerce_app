@@ -1,10 +1,10 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../constants/app_colors.dart';
-import '../viewmodels/product_viewmodel.dart';
-import '../screens/search_screen.dart';
 
 class SignatureCollectionBanner extends StatelessWidget {
   const SignatureCollectionBanner({super.key});
@@ -18,10 +18,7 @@ class SignatureCollectionBanner extends StatelessWidget {
       height: 235,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: goldAccent.withOpacity(0.35),
-          width: 1.5,
-        ),
+        border: Border.all(color: goldAccent.withOpacity(0.35), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(isDark ? 0.4 : 0.1),
@@ -50,8 +47,8 @@ class SignatureCollectionBanner extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      isDark 
-                          ? Colors.black.withOpacity(0.85) 
+                      isDark
+                          ? Colors.black.withOpacity(0.85)
                           : emeraldGreen.withOpacity(0.85),
                       isDark
                           ? Colors.black.withOpacity(0.4)
@@ -75,11 +72,17 @@ class SignatureCollectionBanner extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: goldAccent.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: goldAccent.withOpacity(0.5), width: 1),
+                        border: Border.all(
+                          color: goldAccent.withOpacity(0.5),
+                          width: 1,
+                        ),
                       ),
                       child: Text(
                         "SIGNATURE",
@@ -112,33 +115,10 @@ class SignatureCollectionBanner extends StatelessWidget {
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
-                        final productVM = Provider.of<ProductViewModel>(context, listen: false);
-                        final List<Map<String, String>> searchProducts = productVM.products
-                            .map(
-                              (p) => <String, String>{
-                                'id': p.id,
-                                'title': p.title,
-                                'subtitle': p.subtitle,
-                                'price': p.price,
-                                'imagePath': p.imagePath,
-                                'category': p.category,
-                                'gender': p.gender,
-                              },
-                            )
-                            .toList();
-
-                        Navigator.push(
+                        Provider.of<CartProvider>(
                           context,
-                          PageRouteBuilder(
-                            pageBuilder: (_, __, ___) => SearchScreen(
-                              allProducts: searchProducts,
-                              initialQuery: "Wedding Sets",
-                            ),
-                            transitionsBuilder: (_, anim, __, child) =>
-                                FadeTransition(opacity: anim, child: child),
-                            transitionDuration: const Duration(milliseconds: 250),
-                          ),
-                        );
+                          listen: false,
+                        ).setTabIndex(2);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: goldAccent,
@@ -147,7 +127,10 @@ class SignatureCollectionBanner extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 8,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

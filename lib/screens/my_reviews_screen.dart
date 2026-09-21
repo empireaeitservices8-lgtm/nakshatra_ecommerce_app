@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +8,6 @@ import '../helpers/toast_helper.dart';
 import '../providers/cart_provider.dart';
 import '../viewmodels/review_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import '../models/review.dart';
 
 class MyReviewsScreen extends StatefulWidget {
   static const String path = '/my-reviews';
@@ -35,8 +36,13 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-      Provider.of<ReviewViewModel>(context, listen: false).fetchReviews(customerId);
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<ReviewViewModel>(
+        context,
+        listen: false,
+      ).fetchReviews(customerId);
     });
   }
 
@@ -131,46 +137,58 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: reviewVM.isLoading ? null : () async {
-                          final comment = commentCtrl.text.trim();
-                          final pName = titleCtrl.text.trim();
+                        onPressed: reviewVM.isLoading
+                            ? null
+                            : () async {
+                                final comment = commentCtrl.text.trim();
+                                final pName = titleCtrl.text.trim();
 
-                          if (comment.isEmpty || pName.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("All fields are required")),
-                            );
-                            return;
-                          }
+                                if (comment.isEmpty || pName.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("All fields are required"),
+                                    ),
+                                  );
+                                  return;
+                                }
 
-                          // In this demo, we default productId to '1' or map from common items
-                          String productId = '1';
-                          if (pName.toLowerCase().contains('diamond')) {
-                            productId = '3';
-                          }
+                                // In this demo, we default productId to '1' or map from common items
+                                String productId = '1';
+                                if (pName.toLowerCase().contains('diamond')) {
+                                  productId = '3';
+                                }
 
-                          final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-                          final success = await reviewVM.addReview(
-                            customerId: customerId,
-                            productId: productId,
-                            rating: selectedRating,
-                            comment: comment,
-                          );
+                                final customerId =
+                                    Provider.of<AuthViewModel>(
+                                      context,
+                                      listen: false,
+                                    ).currentUser?.id ??
+                                    '1';
+                                final success = await reviewVM.addReview(
+                                  customerId: customerId,
+                                  productId: productId,
+                                  rating: selectedRating,
+                                  comment: comment,
+                                );
 
-                          if (success) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Review submitted successfully"),
-                                backgroundColor: _emeraldGreen,
-                              ),
-                            );
-                          } else {
-                            ToastHelper.showErrorToast(
-                              context,
-                              reviewVM.errorMessage ?? "Failed to submit review",
-                            );
-                          }
-                        },
+                                if (success) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Review submitted successfully",
+                                      ),
+                                      backgroundColor: _emeraldGreen,
+                                    ),
+                                  );
+                                } else {
+                                  ToastHelper.showErrorToast(
+                                    context,
+                                    reviewVM.errorMessage ??
+                                        "Failed to submit review",
+                                  );
+                                }
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _emeraldGreen,
                           shape: RoundedRectangleBorder(
@@ -178,7 +196,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                           ),
                         ),
                         child: reviewVM.isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
                             : Text(
                                 "Submit Review",
                                 style: GoogleFonts.poppins(
@@ -260,90 +280,88 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       body: reviewVM.isLoading && reviewVM.reviews.isEmpty
           ? const Center(child: CircularProgressIndicator(color: _goldMid))
           : reviewVM.reviews.isEmpty
-              ? Center(
-                  child: Text(
-                    "You haven't reviewed any items yet.",
-                    style: GoogleFonts.poppins(color: Colors.grey.shade600),
-                  ),
-                )
-              : ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.all(20),
-                  itemCount: reviewVM.reviews.length,
-                  itemBuilder: (context, index) {
-                    final rev = reviewVM.reviews[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _cardWhite,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _goldMid.withAlpha(25),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(6),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
+          ? Center(
+              child: Text(
+                "You haven't reviewed any items yet.",
+                style: GoogleFonts.poppins(color: Colors.grey.shade600),
+              ),
+            )
+          : ListView.builder(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              itemCount: reviewVM.reviews.length,
+              itemBuilder: (context, index) {
+                final rev = reviewVM.reviews[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _cardWhite,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _goldMid.withAlpha(25),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(6),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  rev.productTitle,
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: _textDark,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          Expanded(
+                            child: Text(
+                              rev.productTitle,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: _textDark,
                               ),
-                              Text(
-                                rev.date,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            ],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const SizedBox(height: 6),
-                          // Stars row
-                          Row(
-                            children: List.generate(5, (i) {
-                              return Icon(
-                                i < rev.rating
-                                    ? Icons.star
-                                    : Icons.star_border,
-                                color: Colors.amber,
-                                size: 16,
-                              );
-                            }),
-                          ),
-                          const SizedBox(height: 12),
                           Text(
-                            rev.comment,
+                            rev.date,
                             style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                              height: 1.4,
+                              fontSize: 10,
+                              color: Colors.grey.shade400,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                ),
+                      const SizedBox(height: 6),
+                      // Stars row
+                      Row(
+                        children: List.generate(5, (i) {
+                          return Icon(
+                            i < rev.rating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 16,
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        rev.comment,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         color: _cardWhite,

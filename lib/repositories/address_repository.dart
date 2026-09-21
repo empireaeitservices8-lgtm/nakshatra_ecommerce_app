@@ -4,22 +4,50 @@ import '../services/api_service.dart';
 class AddressRepository {
   final ApiService _apiService = ApiService();
 
-  Future<List<Address>> getAddresses({required String customerId}) async {
-    final response = await _apiService.post('/address/view', data: {
-      'params': {
-        'customer_id': int.tryParse(customerId) ?? 1,
-      }
-    });
-    
-    final resData = response.data;
-    final result = resData['result'];
-    if (result == null) throw Exception('Invalid server response');
+  String _normalizeType(String type) {
+    final lower = type.toLowerCase().trim();
+    if (lower == 'home' || lower == 'work' || lower == 'other') {
+      return lower;
+    }
+    return 'home';
+  }
 
-    if (result['status'] == 200 || result['status'] == 'success' || result['success'] == true) {
-      final list = result['data'] as List? ?? [];
-      return list.map((item) => Address.fromJson(item)).toList();
+  Future<List<Address>> getAddresses({required String customerId}) async {
+    final effectiveId = int.tryParse(customerId) ?? 1;
+    dynamic resData;
+
+    try {
+      final response = await _apiService.post(
+        '/addresses',
+        data: {
+          'params': {
+            'customer_id': effectiveId,
+          },
+        },
+      );
+      resData = response.data;
+    } catch (_) {
+      final response = await _apiService.get(
+        '/addresses',
+        queryParameters: {
+          'customer_id': effectiveId,
+        },
+      );
+      resData = response.data;
+    }
+
+    if (resData == null) throw Exception('Invalid server response');
+
+    final dataMap = resData is Map ? (resData['result'] is Map ? resData['result'] : resData) : {};
+    if (dataMap['status'] == 'success' ||
+        dataMap['status'] == 200 ||
+        dataMap['success'] == true ||
+        dataMap['addresses'] != null ||
+        dataMap['data'] != null) {
+      final list = (dataMap['addresses'] as List?) ?? (dataMap['data'] as List?) ?? [];
+      return list.map((item) => Address.fromJson(item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item))).toList();
     } else {
-      throw Exception(result['message'] ?? 'Failed to fetch addresses');
+      throw Exception(dataMap['message'] ?? dataMap['error'] ?? 'Failed to fetch addresses');
     }
   }
 
@@ -33,21 +61,23 @@ class AddressRepository {
     final response = await _apiService.post('/address/add', data: {
       'params': {
         'customer_id': int.tryParse(customerId) ?? 1,
-        'label': label,
-        'name': name,
+        'type': _normalizeType(label),
+        'recipient_name': name,
         'phone': phone,
-        'address': address,
+        'address_details': address,
       }
     });
 
     final resData = response.data;
-    final result = resData['result'];
+    final result = resData is Map ? (resData['result'] ?? resData) : null;
     if (result == null) throw Exception('Invalid server response');
 
-    if (result['status'] == 200 || result['status'] == 'success' || result['success'] == true) {
-      return Address.fromJson(result['data'] ?? {});
+    if (result is Map && (result['status'] == 200 || result['status'] == 'success' || result['success'] == true)) {
+      final data = (result['data'] is Map) ? result['data'] as Map<String, dynamic> : Map<String, dynamic>.from(result);
+      return Address.fromJson(data);
     } else {
-      throw Exception(result['message'] ?? 'Failed to save address');
+      final msg = result is Map ? (result['message'] ?? result['error']) : 'Failed to save address';
+      throw Exception(msg?.toString() ?? 'Failed to save address');
     }
   }
 
@@ -63,21 +93,23 @@ class AddressRepository {
       'params': {
         'customer_id': int.tryParse(customerId) ?? 1,
         'address_id': int.tryParse(addressId) ?? 0,
-        'label': label,
-        'name': name,
+        'type': _normalizeType(label),
+        'recipient_name': name,
         'phone': phone,
-        'address': address,
+        'address_details': address,
       }
     });
 
     final resData = response.data;
-    final result = resData['result'];
+    final result = resData is Map ? (resData['result'] ?? resData) : null;
     if (result == null) throw Exception('Invalid server response');
 
-    if (result['status'] == 200 || result['status'] == 'success' || result['success'] == true) {
-      return Address.fromJson(result['data'] ?? {});
+    if (result is Map && (result['status'] == 200 || result['status'] == 'success' || result['success'] == true)) {
+      final data = (result['data'] is Map) ? result['data'] as Map<String, dynamic> : Map<String, dynamic>.from(result);
+      return Address.fromJson(data);
     } else {
-      throw Exception(result['message'] ?? 'Failed to update address');
+      final msg = result is Map ? (result['message'] ?? result['error']) : 'Failed to update address';
+      throw Exception(msg?.toString() ?? 'Failed to update address');
     }
   }
 
@@ -86,15 +118,19 @@ class AddressRepository {
       'params': {
         'customer_id': int.tryParse(customerId) ?? 1,
         'address_id': int.tryParse(id) ?? 0,
+        'id': int.tryParse(id) ?? 0,
       }
     });
 
     final resData = response.data;
-    final result = resData['result'];
+    final result = resData is Map ? (resData['result'] ?? resData) : null;
     if (result == null) throw Exception('Invalid server response');
 
-    if (result['status'] != 200 && result['status'] != 'success' && result['success'] != true) {
-      throw Exception(result['message'] ?? 'Failed to delete address');
+    if (result is Map && (result['status'] == 200 || result['status'] == 'success' || result['success'] == true)) {
+      return;
+    } else {
+      final msg = result is Map ? (result['message'] ?? result['error']) : 'Failed to delete address';
+      throw Exception(msg?.toString() ?? 'Failed to delete address');
     }
   }
 }

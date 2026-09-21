@@ -1,35 +1,28 @@
 import 'package:flutter/material.dart';
-import '../features/splashscreen/view/splashscreen.dart';
-import '../features/auth/view/login_screen.dart';
-import '../features/auth/view/otp_verification_screen.dart';
-import '../features/auth/view/register_screen.dart';
-import '../features/dashboard/view/dashboard_screen.dart';
-import '../features/devices/view/device_list_screen.dart';
-import '../features/devices/view/add_device_screen.dart';
-import '../features/devices/view/device_detail_screen.dart';
-import '../features/device_groups/view/device_group_list_screen.dart';
-import '../features/users/view/user_list_screen.dart';
-import '../features/users/view/add_user_screen.dart';
-import '../models/device_models.dart';
-import '../screens/main_screen.dart';
 import '../screens/cart_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/settings_screen.dart';
-import '../screens/search_screen.dart';
 import '../screens/categories_screen.dart';
-import '../screens/my_orders_screen.dart';
-import '../screens/my_reviews_screen.dart';
-import '../screens/payment_methods_screen.dart';
-import '../screens/refer_earn_screen.dart';
-import '../screens/saved_addresses_screen.dart';
-import '../screens/wishlist_screen.dart';
+import '../screens/category_products_screen.dart';
+import '../screens/chat_screen.dart';
 import '../screens/checkout_screen.dart';
 import '../screens/gold_scheme/gold_scheme_screen.dart';
-import '../screens/product_detail_screen.dart';
-import '../screens/chat_screen.dart';
-import '../screens/category_products_screen.dart';
+import '../screens/help_center_screen.dart';
 import '../screens/latest_models_screen.dart';
+import '../screens/login_screen.dart';
+import '../screens/main_screen.dart';
+import '../screens/my_orders_screen.dart';
+import '../screens/my_reviews_screen.dart';
+import '../screens/otp_verification_screen.dart';
+import '../screens/payment_methods_screen.dart';
+import '../screens/product_detail_screen.dart';
+import '../screens/profile_screen.dart';
 import '../screens/recommendations_screen.dart';
+import '../screens/refer_earn_screen.dart';
+import '../screens/register_screen.dart';
+import '../screens/saved_addresses_screen.dart';
+import '../screens/search_screen.dart';
+import '../screens/settings_screen.dart';
+import '../screens/splashscreen.dart';
+import '../screens/wishlist_screen.dart';
 import 'connection_failed_screen.dart';
 
 Map<String, WidgetBuilder> appRoutes() {
@@ -38,12 +31,7 @@ Map<String, WidgetBuilder> appRoutes() {
     LoginScreen.routeName: (context) => const LoginScreen(),
     OtpVerificationScreen.routeName: (context) => const OtpVerificationScreen(),
     RegisterScreen.routeName: (context) => const RegisterScreen(),
-    DashboardScreen.routeName: (context) => const DashboardScreen(),
-    DeviceListScreen.routeName: (context) => const DeviceListScreen(),
-    AddDeviceScreen.routeName: (context) => const AddDeviceScreen(),
-    DeviceGroupListScreen.routeName: (context) => const DeviceGroupListScreen(),
-    UserListScreen.routeName: (context) => const UserListScreen(),
-    AddUserScreen.routeName: (context) => const AddUserScreen(),
+    '/dashboard': (context) => const MainScreen(),
     MainScreen.path: (context) => const MainScreen(),
     CartScreen.path: (context) => const CartScreen(),
     ProfileScreen.path: (context) => const ProfileScreen(),
@@ -60,6 +48,8 @@ Map<String, WidgetBuilder> appRoutes() {
     ChatScreen.path: (context) => const ChatScreen(),
     LatestModelsScreen.path: (context) => const LatestModelsScreen(),
     RecommendationsScreen.path: (context) => const RecommendationsScreen(),
+    HelpCenterScreen.path: (context) => const HelpCenterScreen(),
+    '/signup': (context) => const RegisterScreen(),
     ConnectionFailedScreen.routeName: (context) => const ConnectionFailedScreen(),
   };
 }
@@ -67,11 +57,6 @@ Map<String, WidgetBuilder> appRoutes() {
 Route<dynamic>? onAppGenerateRoute(RouteSettings settings) {
   debugPrint("Navigating to: ${settings.name}");
   switch (settings.name) {
-    case DeviceDetailScreen.routeName:
-      final device = settings.arguments as DeviceModel?;
-      return MaterialPageRoute(
-        builder: (_) => DeviceDetailScreen(device: device),
-      );
     case ProductDetailScreen.path:
       final args = settings.arguments as Map<String, dynamic>;
       return MaterialPageRoute(

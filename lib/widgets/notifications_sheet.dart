@@ -1,10 +1,11 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
+import 'package:nakshatra_app/constants/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
-import '../constants/app_colors.dart';
 import '../viewmodels/notification_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import '../models/notification.dart';
 
 class NotificationsSheet extends StatefulWidget {
   const NotificationsSheet({super.key});
@@ -28,13 +29,20 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-      Provider.of<NotificationViewModel>(context, listen: false).fetchNotifications(customerId);
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<NotificationViewModel>(
+        context,
+        listen: false,
+      ).fetchNotifications(customerId);
     });
   }
 
   void _markAllRead(NotificationViewModel notifVM) {
-    final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
+    final customerId =
+        Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+        '1';
     for (final n in notifVM.notifications) {
       if (!n.read) {
         notifVM.markAsRead(customerId, n.id);
@@ -46,7 +54,9 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
     final t = title.toLowerCase();
     if (t.contains('shipped') || t.contains('deliver')) {
       return Icons.local_shipping_outlined;
-    } else if (t.contains('off') || t.contains('coupon') || t.contains('sale')) {
+    } else if (t.contains('off') ||
+        t.contains('coupon') ||
+        t.contains('sale')) {
       return Icons.local_offer_outlined;
     } else if (t.contains('review') || t.contains('rate')) {
       return Icons.star_rounded;
@@ -153,137 +163,140 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
           // ── List ─────────────────────────────────────────────────────────
           Expanded(
             child: notifVM.isBusy && notifVM.notifications.isEmpty
-                ? const Center(child: CircularProgressIndicator(color: goldAccent))
+                ? const Center(
+                    child: CircularProgressIndicator(color: goldAccent),
+                  )
                 : notifVM.notifications.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.notifications_off_outlined,
-                              size: 56,
-                              color: goldAccent.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No notifications yet',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: _textMuted,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.notifications_off_outlined,
+                          size: 56,
+                          color: goldAccent.withOpacity(0.5),
                         ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: notifVM.notifications.length,
-                        separatorBuilder: (_, __) => Divider(
-                          height: 1,
-                          indent: 72,
-                          endIndent: 20,
-                          color: goldAccent.withOpacity(0.15),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No notifications yet',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: _textMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        itemBuilder: (_, i) {
-                          final n = notifVM.notifications[i];
-                          final isRead = n.read;
-                          final color = _getColor(n.title);
-                          final icon = _getIcon(n.title);
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: notifVM.notifications.length,
+                    separatorBuilder: (_, _) => Divider(
+                      height: 1,
+                      indent: 72,
+                      endIndent: 20,
+                      color: goldAccent.withOpacity(0.15),
+                    ),
+                    itemBuilder: (_, i) {
+                      final n = notifVM.notifications[i];
+                      final isRead = n.read;
+                      final color = _getColor(n.title);
+                      final icon = _getIcon(n.title);
 
-                          return InkWell(
-                            onTap: () {
-                              if (!isRead) {
-                                final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-                                notifVM.markAsRead(customerId, n.id);
-                              }
-                            },
-                            child: Container(
-                              color: isRead ? Colors.transparent : _bgCream,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 14,
+                      return InkWell(
+                        onTap: () {
+                          if (!isRead) {
+                            final customerId =
+                                Provider.of<AuthViewModel>(
+                                  context,
+                                  listen: false,
+                                ).currentUser?.id ??
+                                '1';
+                            notifVM.markAsRead(customerId, n.id);
+                          }
+                        },
+                        child: Container(
+                          color: isRead ? Colors.transparent : _bgCream,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Icon circle
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: color.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(icon, color: color, size: 22),
                               ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Icon circle
-                                  Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: color.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      icon,
-                                      color: color,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  // Text
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                              const SizedBox(width: 14),
+                              // Text
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
                                       children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                n.title,
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: isRead
-                                                      ? FontWeight.w500
-                                                      : FontWeight.w700,
-                                                  color: _textDark,
-                                                ),
-                                              ),
+                                        Expanded(
+                                          child: Text(
+                                            n.title,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: isRead
+                                                  ? FontWeight.w500
+                                                  : FontWeight.w700,
+                                              color: _textDark,
                                             ),
-                                            Text(
-                                              n.time,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: _textMuted,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          n.message,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: _textMuted,
-                                            height: 1.4,
                                           ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          n.time,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: _textMuted,
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  // Unread dot
-                                  if (!isRead)
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      margin: const EdgeInsets.only(
-                                        top: 4,
-                                        left: 8,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      n.message,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: _textMuted,
+                                        height: 1.4,
                                       ),
-                                      decoration: const BoxDecoration(
-                                        color: goldDark,
-                                        shape: BoxShape.circle,
-                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                              // Unread dot
+                              if (!isRead)
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  margin: const EdgeInsets.only(
+                                    top: 4,
+                                    left: 8,
+                                  ),
+                                  decoration: const BoxDecoration(
+                                    color: goldDark,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

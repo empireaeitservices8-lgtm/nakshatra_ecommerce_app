@@ -50,81 +50,70 @@ class _SkeletonProductCardState extends State<SkeletonProductCard>
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(10.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Shimmer Image Area
-                _ShimmerContainer(
-                  height: 120,
+                Expanded(
+                  child: _ShimmerContainer(
+                    height: double.infinity,
+                    width: double.infinity,
+                    borderRadius: BorderRadius.circular(16),
+                    baseColor: baseColor,
+                    highlightColor: highlightColor,
+                    offset: _gradientPosition.value,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Shimmer Bottom Pill
+                Container(
                   width: double.infinity,
-                  borderRadius: BorderRadius.circular(20),
-                  baseColor: baseColor,
-                  highlightColor: highlightColor,
-                  offset: _gradientPosition.value,
-                ),
-                const SizedBox(height: 10),
-                // Shimmer Title
-                _ShimmerContainer(
-                  height: 14,
-                  width: 100,
-                  borderRadius: BorderRadius.circular(4),
-                  baseColor: baseColor,
-                  highlightColor: highlightColor,
-                  offset: _gradientPosition.value,
-                ),
-                const SizedBox(height: 6),
-                // Shimmer Subtitle line 1
-                _ShimmerContainer(
-                  height: 10,
-                  width: double.infinity,
-                  borderRadius: BorderRadius.circular(3),
-                  baseColor: baseColor,
-                  highlightColor: highlightColor,
-                  offset: _gradientPosition.value,
-                ),
-                const SizedBox(height: 4),
-                // Shimmer Subtitle line 2
-                _ShimmerContainer(
-                  height: 10,
-                  width: 120,
-                  borderRadius: BorderRadius.circular(3),
-                  baseColor: baseColor,
-                  highlightColor: highlightColor,
-                  offset: _gradientPosition.value,
-                ),
-                const SizedBox(height: 12),
-                // Shimmer Rating
-                _ShimmerContainer(
-                  height: 10,
-                  width: 50,
-                  borderRadius: BorderRadius.circular(3),
-                  baseColor: baseColor,
-                  highlightColor: highlightColor,
-                  offset: _gradientPosition.value,
-                ),
-                const SizedBox(height: 12),
-                // Shimmer Price and Actions Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _ShimmerContainer(
-                      height: 16,
-                      width: 60,
-                      borderRadius: BorderRadius.circular(4),
-                      baseColor: baseColor,
-                      highlightColor: highlightColor,
-                      offset: _gradientPosition.value,
-                    ),
-                    _ShimmerContainer(
-                      height: 28,
-                      width: 60,
-                      borderRadius: BorderRadius.circular(14),
-                      baseColor: baseColor,
-                      highlightColor: highlightColor,
-                      offset: _gradientPosition.value,
-                    ),
-                  ],
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF262626)
+                        : const Color(0xFFF6F5F8),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _ShimmerContainer(
+                            height: 12,
+                            width: 65,
+                            borderRadius: BorderRadius.circular(4),
+                            baseColor: baseColor,
+                            highlightColor: highlightColor,
+                            offset: _gradientPosition.value,
+                          ),
+                          const SizedBox(height: 4),
+                          _ShimmerContainer(
+                            height: 12,
+                            width: 45,
+                            borderRadius: BorderRadius.circular(4),
+                            baseColor: baseColor,
+                            highlightColor: highlightColor,
+                            offset: _gradientPosition.value,
+                          ),
+                        ],
+                      ),
+                      _ShimmerContainer(
+                        height: 28,
+                        width: 28,
+                        borderRadius: BorderRadius.circular(14),
+                        baseColor: baseColor,
+                        highlightColor: highlightColor,
+                        offset: _gradientPosition.value,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

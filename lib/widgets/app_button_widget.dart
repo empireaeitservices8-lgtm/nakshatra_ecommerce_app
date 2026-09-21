@@ -44,19 +44,18 @@ class AppButton extends StatelessWidget {
     double? width,
     double height = 48.0,
     bool isLoading = false,
-  }) =>
-      AppButton(
-        key: key,
-        text: text,
-        child: child,
-        onPressed: onPressed ?? onTap,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        width: width,
-        height: height,
-        isLoading: isLoading,
-        isCurved: true,
-      );
+  }) => AppButton(
+    key: key,
+    text: text,
+    onPressed: onPressed ?? onTap,
+    backgroundColor: backgroundColor,
+    textColor: textColor,
+    width: width,
+    height: height,
+    isLoading: isLoading,
+    isCurved: true,
+    child: child,
+  );
 
   factory AppButton.squareButton({
     Key? key,
@@ -69,26 +68,26 @@ class AppButton extends StatelessWidget {
     double? width,
     double height = 48.0,
     bool isLoading = false,
-  }) =>
-      AppButton(
-        key: key,
-        text: text,
-        child: child,
-        onPressed: onPressed ?? onTap,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-        width: width,
-        height: height,
-        isLoading: isLoading,
-        isCurved: false,
-      );
+  }) => AppButton(
+    key: key,
+    text: text,
+    onPressed: onPressed ?? onTap,
+    backgroundColor: backgroundColor,
+    textColor: textColor,
+    width: width,
+    height: height,
+    isLoading: isLoading,
+    isCurved: false,
+    child: child,
+  );
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBg = backgroundColor ??
+    final effectiveBg =
+        backgroundColor ??
         (isBordered ? Colors.transparent : AppPalette.emerald);
-    final effectiveTextColor = textColor ??
-        (isBordered ? AppPalette.emerald : Colors.white);
+    final effectiveTextColor =
+        textColor ?? (isBordered ? AppPalette.emerald : Colors.white);
     final borderRadius = BorderRadius.circular(isCurved ? 24.0 : 8.0);
 
     return SizedBox(
@@ -123,14 +122,14 @@ class AppButton extends StatelessWidget {
                 ),
               )
             : (child ??
-                Text(
-                  text ?? '',
-                  style: TextStyle(
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w600,
-                    color: effectiveTextColor,
-                  ),
-                )),
+                  Text(
+                    text ?? '',
+                    style: TextStyle(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w600,
+                      color: effectiveTextColor,
+                    ),
+                  )),
       ),
     );
   }

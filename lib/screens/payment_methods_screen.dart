@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +8,6 @@ import '../helpers/toast_helper.dart';
 import '../providers/cart_provider.dart';
 import '../viewmodels/payment_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import '../models/payment_method.dart';
 
 class PaymentMethodsScreen extends StatefulWidget {
   static const String path = '/payment-methods';
@@ -37,14 +38,24 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-      Provider.of<PaymentViewModel>(context, listen: false).fetchCards(customerId);
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<PaymentViewModel>(
+        context,
+        listen: false,
+      ).fetchCards(customerId);
     });
   }
 
   void _deleteCard(String id) async {
-    final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-    final success = await Provider.of<PaymentViewModel>(context, listen: false).deleteCard(customerId, id);
+    final customerId =
+        Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+        '1';
+    final success = await Provider.of<PaymentViewModel>(
+      context,
+      listen: false,
+    ).deleteCard(customerId, id);
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -194,54 +205,73 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                     ),
                     const SizedBox(height: 25),
                     ElevatedButton(
-                      onPressed: paymentVM.isLoading ? null : () async {
-                        final number = numberCtrl.text.trim();
-                        final expStr = expCtrl.text.trim();
-                        final cvv = cvvCtrl.text.trim();
-                        final holder = holderCtrl.text.trim();
+                      onPressed: paymentVM.isLoading
+                          ? null
+                          : () async {
+                              final number = numberCtrl.text.trim();
+                              final expStr = expCtrl.text.trim();
+                              final cvv = cvvCtrl.text.trim();
+                              final holder = holderCtrl.text.trim();
 
-                        if (number.isEmpty || expStr.isEmpty || cvv.isEmpty || holder.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please fill all card details"),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                          return;
-                        }
+                              if (number.isEmpty ||
+                                  expStr.isEmpty ||
+                                  cvv.isEmpty ||
+                                  holder.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Please fill all card details",
+                                    ),
+                                    backgroundColor: Colors.redAccent,
+                                  ),
+                                );
+                                return;
+                              }
 
-                        // Parse expiry
-                        final expParts = expStr.split('/');
-                        final expMonth = expParts.isNotEmpty ? expParts[0].trim() : '12';
-                        final expYear = expParts.length > 1 ? expParts[1].trim() : '28';
+                              // Parse expiry
+                              final expParts = expStr.split('/');
+                              final expMonth = expParts.isNotEmpty
+                                  ? expParts[0].trim()
+                                  : '12';
+                              final expYear = expParts.length > 1
+                                  ? expParts[1].trim()
+                                  : '28';
 
-                        final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-                        final success = await paymentVM.saveCard(
-                          customerId: customerId,
-                          number: number,
-                          expiryMonth: expMonth,
-                          expiryYear: expYear,
-                          cvv: cvv,
-                          holder: holder,
-                          brand: selectedCardType.toUpperCase(),
-                          theme: 'platinum',
-                        );
+                              final customerId =
+                                  Provider.of<AuthViewModel>(
+                                    context,
+                                    listen: false,
+                                  ).currentUser?.id ??
+                                  '1';
+                              final success = await paymentVM.saveCard(
+                                customerId: customerId,
+                                number: number,
+                                expiryMonth: expMonth,
+                                expiryYear: expYear,
+                                cvv: cvv,
+                                holder: holder,
+                                brand: selectedCardType.toUpperCase(),
+                                theme: 'platinum',
+                              );
 
-                        if (success) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text("Card added successfully"),
-                              backgroundColor: _emeraldGreen,
-                            ),
-                          );
-                        } else {
-                          ToastHelper.showErrorToast(
-                            context,
-                            paymentVM.errorMessage ?? "Failed to add card",
-                          );
-                        }
-                      },
+                              if (success) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text(
+                                      "Card added successfully",
+                                    ),
+                                    backgroundColor: _emeraldGreen,
+                                  ),
+                                );
+                              } else {
+                                ToastHelper.showErrorToast(
+                                  context,
+                                  paymentVM.errorMessage ??
+                                      "Failed to add card",
+                                );
+                              }
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _emeraldGreen,
                         minimumSize: const Size(double.infinity, 52),
@@ -466,7 +496,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
                 const SizedBox(height: 15),
                 ElevatedButton.icon(
                   onPressed: _addCardForm,

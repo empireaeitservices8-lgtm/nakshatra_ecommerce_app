@@ -1,10 +1,12 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../viewmodels/product_viewmodel.dart';
+import 'package:provider/provider.dart';
 
 import '../providers/cart_provider.dart';
 import '../viewmodels/cart_viewmodel.dart';
-import '../viewmodels/product_viewmodel.dart';
 import 'home_screen.dart';
 import 'wishlist_screen.dart';
 import 'categories_screen.dart';
@@ -33,120 +35,142 @@ class _MainScreenState extends State<MainScreen> {
   final Color goldDark = const Color(0xFFB8860B);
 
   @override
-  Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
-    final cartVM = Provider.of<CartViewModel>(context);
-    final currentIndex = cartProvider.currentTabIndex;
-    final isDark = cartProvider.isDarkMode;
-    final navBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final activeColor = isDark ? goldAccent : emeraldGreen;
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<CartProvider>(context, listen: false).setTabIndex(0);
+      }
+    });
+  }
 
-    return Scaffold(
-      body: IndexedStack(
-        index: currentIndex >= _screens.length ? 0 : currentIndex,
-        children: _screens,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const CartScreen(),
-              transitionsBuilder: (_, anim, __, child) => SlideTransition(
-                position:
-                    Tween<Offset>(
-                      begin: const Offset(0, 1),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
-                    ),
-                child: child,
-              ),
-              transitionDuration: const Duration(milliseconds: 350),
-            ),
-          );
-        },
-        backgroundColor: activeColor,
-        elevation: 6,
-        shape: const CircleBorder(),
-        child: Stack(
-          alignment: Alignment.center,
-          clipBehavior: Clip.none,
-          children: [
-            const Icon(
-              Icons.shopping_bag_outlined,
-              color: Colors.white,
-              size: 24,
-            ),
-            Positioned(
-              right: -5,
-              top: -5,
-              child: AnimatedCartBadge(count: cartVM.items.length),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        color: navBg,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        elevation: 12,
-        padding: EdgeInsets.zero,
-        height: 64,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Left Nav Items
-              Row(
-                children: [
-                  _buildNavItem(
-                    0,
-                    Icons.home_outlined,
-                    Icons.home,
-                    "Home",
-                    currentIndex,
-                    cartProvider,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildNavItem(
-                    1,
-                    Icons.favorite_border,
-                    Icons.favorite,
-                    "Wishlist",
-                    currentIndex,
-                    cartProvider,
-                  ),
-                ],
-              ),
-              // Right Nav Items
-              Row(
-                children: [
-                  _buildNavItem(
-                    2,
-                    Icons.grid_view_outlined,
-                    Icons.grid_view_rounded,
-                    "Categories",
-                    currentIndex,
-                    cartProvider,
-                  ),
-                  const SizedBox(width: 8),
-                  _buildNavItem(
-                    3,
-                    Icons.person_outline,
-                    Icons.person,
-                    "You",
-                    currentIndex,
-                    cartProvider,
-                  ),
-                ],
-              ),
-            ],
+  @override
+  Widget build(BuildContext context) {
+    return Selector<CartProvider, ({int tabIndex, bool isDark})>(
+      selector: (_, cp) =>
+          (tabIndex: cp.currentTabIndex, isDark: cp.isDarkMode),
+      builder: (context, navState, _) {
+        final currentIndex = navState.tabIndex;
+        final isDark = navState.isDark;
+        final navBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+        final activeColor = isDark ? goldAccent : emeraldGreen;
+        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+
+        return Scaffold(
+          body: IndexedStack(
+            index: currentIndex >= _screens.length ? 0 : currentIndex,
+            children: _screens,
           ),
-        ),
-      ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (_, _, _) => const CartScreen(),
+                  transitionsBuilder: (_, anim, _, child) => SlideTransition(
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, 1),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: anim,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                    child: child,
+                  ),
+                  transitionDuration: const Duration(milliseconds: 350),
+                ),
+              );
+            },
+            backgroundColor: activeColor,
+            elevation: 6,
+            shape: const CircleBorder(),
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(
+                  Icons.shopping_bag_outlined,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                Positioned(
+                  right: -5,
+                  top: -5,
+                  child: Selector<CartViewModel, int>(
+                    selector: (_, vm) => vm.items.length,
+                    builder: (_, count, _) => AnimatedCartBadge(count: count),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
+          bottomNavigationBar: BottomAppBar(
+            color: navBg,
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 8,
+            elevation: 12,
+            padding: EdgeInsets.zero,
+            height: 64,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Left Nav Items
+                  Row(
+                    children: [
+                      _buildNavItem(
+                        0,
+                        Icons.home_outlined,
+                        Icons.home,
+                        "Home",
+                        currentIndex,
+                        cartProvider,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildNavItem(
+                        1,
+                        Icons.favorite_border,
+                        Icons.favorite,
+                        "Wishlist",
+                        currentIndex,
+                        cartProvider,
+                      ),
+                    ],
+                  ),
+                  // Right Nav Items
+                  Row(
+                    children: [
+                      _buildNavItem(
+                        2,
+                        Icons.grid_view_outlined,
+                        Icons.grid_view_rounded,
+                        "Categories",
+                        currentIndex,
+                        cartProvider,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildNavItem(
+                        3,
+                        Icons.person_outline,
+                        Icons.person,
+                        "You",
+                        currentIndex,
+                        cartProvider,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -167,7 +191,10 @@ class _MainScreenState extends State<MainScreen> {
       onTap: () {
         provider.setTabIndex(index);
         if (index == 2) {
-          Provider.of<ProductViewModel>(context, listen: false).fetchCategories();
+          Provider.of<ProductViewModel>(
+            context,
+            listen: false,
+          ).fetchCategories();
         }
       },
       behavior: HitTestBehavior.opaque,

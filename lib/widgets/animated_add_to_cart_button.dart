@@ -45,6 +45,7 @@ class AnimatedAddToCartButton extends StatelessWidget {
                 color: isDark ? Colors.white12 : const Color(0xFFFAF6EF),
                 borderRadius: BorderRadius.circular(height / 2),
                 border: Border.all(
+                  // ignore: deprecated_member_use
                   color: const Color(0xFFD4AF37).withOpacity(0.4),
                   width: 1.0,
                 ),

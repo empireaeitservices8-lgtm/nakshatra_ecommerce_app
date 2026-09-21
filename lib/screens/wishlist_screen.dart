@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +8,6 @@ import '../providers/cart_provider.dart';
 import '../viewmodels/wishlist_viewmodel.dart';
 import '../viewmodels/cart_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import 'cart_screen.dart';
 import 'product_detail_screen.dart';
 
 class WishlistScreen extends StatefulWidget {
@@ -58,7 +59,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Image.asset(
+        cacheWidth: 200,
+        cacheHeight: 200,
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/images/product1.png',
           width: width,
           height: height,
@@ -71,7 +74,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, __, ___) => Image.asset(
+        errorBuilder: (_, _, _) => Image.asset(
           'assets/images/product1.png',
           width: width,
           height: height,
@@ -187,7 +190,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                 decoration: BoxDecoration(
                                   color: _bgCream,
                                   borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: _goldMid.withAlpha(30)),
+                                  border: Border.all(
+                                    color: _goldMid.withAlpha(30),
+                                  ),
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(14),
@@ -286,16 +291,28 @@ class _WishlistScreenState extends State<WishlistScreen> {
                                     listen: false,
                                   ).currentUser?.id ??
                                   '1';
-                              await wishlistVM.removeFromWishlist(
-                                customerId,
-                                item.id,
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Removed from Wishlist"),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
+                              final success = await wishlistVM
+                                  .removeFromWishlist(customerId, item.id);
+                              if (context.mounted) {
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Removed from Wishlist"),
+                                      duration: Duration(seconds: 1),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        wishlistVM.errorMessage ??
+                                            "Failed to remove from Wishlist",
+                                      ),
+                                      backgroundColor: Colors.red.shade800,
+                                    ),
+                                  );
+                                }
+                              }
                             },
                           ),
                         ],
@@ -305,63 +322,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
                 );
               },
             ),
-    );
-  }
-
-  Widget _buildCartIconWithBadge(BuildContext context) {
-    return Consumer<CartProvider>(
-      builder: (context, cart, child) => Stack(
-        clipBehavior: Clip.none,
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CartScreen()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: _bgCream,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.shopping_cart_outlined,
-                color: _textDark,
-                size: 20,
-              ),
-            ),
-          ),
-          if (cart.items.isNotEmpty)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text(
-                  '${cart.items.length}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }

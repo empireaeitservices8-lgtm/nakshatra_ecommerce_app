@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_config.dart';
-import '../features/splashscreen/view/splashscreen.dart';
+import '../screens/splashscreen.dart';
 import '../screens/login_screen.dart';
+import '../screens/register_screen.dart';
 import '../screens/main_screen.dart';
 import '../screens/cart_screen.dart';
 import '../screens/profile_screen.dart';
@@ -16,7 +17,6 @@ import '../screens/refer_earn_screen.dart';
 import '../screens/saved_addresses_screen.dart';
 import '../screens/wishlist_screen.dart';
 import '../screens/checkout_screen.dart';
-import '../screens/signup_screen.dart';
 import '../screens/gold_scheme/gold_scheme_screen.dart';
 import '../screens/product_detail_screen.dart';
 import '../screens/chat_screen.dart';
@@ -57,8 +57,9 @@ Route<dynamic>? generateRoute(RouteSettings settings) {
       return MaterialPageRoute(builder: (_) => const WishlistScreen());
     case CheckoutScreen.path:
       return MaterialPageRoute(builder: (_) => const CheckoutScreen());
-    case SignUpScreen.path:
-      return MaterialPageRoute(builder: (_) => const SignUpScreen());
+    case RegisterScreen.routeName:
+    case '/signup':
+      return MaterialPageRoute(builder: (_) => const RegisterScreen());
     case GoldSchemeScreen.path:
       return MaterialPageRoute(builder: (_) => const GoldSchemeScreen());
     case ProductDetailScreen.path:

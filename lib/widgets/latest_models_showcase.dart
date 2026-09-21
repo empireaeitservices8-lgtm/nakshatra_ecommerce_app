@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nakshatra_app/constants/app_colors.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../viewmodels/product_viewmodel.dart';
-import '../models/product.dart';
-import '../constants/app_colors.dart';
 import '../screens/latest_models_screen.dart';
 import 'latest_model_card.dart';
 
@@ -43,10 +42,7 @@ class LatestModelsShowcase extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   "Freshly crafted new arrivals",
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),

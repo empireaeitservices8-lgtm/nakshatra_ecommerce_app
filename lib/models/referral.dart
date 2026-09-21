@@ -40,18 +40,40 @@ class ReferralInfo {
     required this.referralCode,
     required this.referredCount,
     required this.rewardsEarnedInr,
-    required this.history,
+    this.history = const [],
   });
+
+  int get friendsInvited => referredCount;
+  double get goldEarned => rewardsEarnedInr;
 
   factory ReferralInfo.fromJson(Map<String, dynamic> json) {
     final list = json['history'] as List?;
     final historyList = list != null
-        ? list.map((item) => ReferralHistoryItem.fromJson(item)).toList()
+        ? list.map((item) => ReferralHistoryItem.fromJson(item is Map<String, dynamic> ? item : Map<String, dynamic>.from(item))).toList()
         : <ReferralHistoryItem>[];
+
+    final rawCode = json['referral_code'] ?? json['referralCode'] ?? '';
+
+    int friendsCount = 0;
+    final rawFriends = json['friends_invited'] ?? json['referred_count'] ?? json['referredCount'] ?? 0;
+    if (rawFriends is num) {
+      friendsCount = rawFriends.toInt();
+    } else {
+      friendsCount = int.tryParse(rawFriends.toString()) ?? 0;
+    }
+
+    double goldEarned = 0.0;
+    final rawGold = json['gold_earned'] ?? json['rewards_earned_inr'] ?? json['rewardsEarnedInr'] ?? 0.0;
+    if (rawGold is num) {
+      goldEarned = rawGold.toDouble();
+    } else {
+      goldEarned = double.tryParse(rawGold.toString()) ?? 0.0;
+    }
+
     return ReferralInfo(
-      referralCode: json['referral_code'] ?? json['referralCode'] ?? '',
-      referredCount: json['referred_count'] ?? json['referredCount'] ?? 0,
-      rewardsEarnedInr: (json['rewards_earned_inr'] ?? json['rewardsEarnedInr'] ?? 0.0).toDouble(),
+      referralCode: rawCode.toString(),
+      referredCount: friendsCount,
+      rewardsEarnedInr: goldEarned,
       history: historyList,
     );
   }
@@ -59,9 +81,9 @@ class ReferralInfo {
   Map<String, dynamic> toJson() {
     return {
       'referral_code': referralCode,
-      'referred_count': referredCount,
-      'rewards_earned_inr': rewardsEarnedInr,
-      'history': history.map((item) => item.toJson()).toList(),
+      'friends_invited': referredCount,
+      'gold_earned': rewardsEarnedInr,
+      'history': history.map((e) => e.toJson()).toList(),
     };
   }
 }

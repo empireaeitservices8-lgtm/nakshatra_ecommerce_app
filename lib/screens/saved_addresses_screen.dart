@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -35,22 +37,31 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-      Provider.of<AddressViewModel>(context, listen: false).fetchAddresses(customerId);
+      final customerId =
+          Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+          '1';
+      Provider.of<AddressViewModel>(
+        context,
+        listen: false,
+      ).fetchAddresses(customerId);
     });
   }
 
   void _deleteAddress(String id) async {
     final addressVM = Provider.of<AddressViewModel>(context, listen: false);
-    final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
-    await addressVM.deleteAddress(customerId, id);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Address deleted successfully"),
-        backgroundColor: Colors.redAccent,
-        duration: Duration(seconds: 1),
-      ),
-    );
+    final customerId =
+        Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ??
+        '1';
+    final success = await addressVM.deleteAddress(customerId, id);
+    if (!mounted) return;
+    if (success) {
+      ToastHelper.showSuccessToast(context, "Address deleted successfully");
+    } else {
+      ToastHelper.showErrorToast(
+        context,
+        addressVM.errorMessage ?? "Failed to delete address",
+      );
+    }
   }
 
   void _showAddressForm({Address? existingAddress}) {
@@ -181,7 +192,12 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                                   return;
                                 }
 
-                                final customerId = Provider.of<AuthViewModel>(context, listen: false).currentUser?.id ?? '1';
+                                final customerId =
+                                    Provider.of<AuthViewModel>(
+                                      context,
+                                      listen: false,
+                                    ).currentUser?.id ??
+                                    '1';
                                 final bool success;
                                 if (isEditing) {
                                   success = await addressVM.updateAddress(
@@ -204,20 +220,17 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
 
                                 if (success) {
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        isEditing
-                                            ? "Address updated successfully"
-                                            : "Address saved successfully",
-                                      ),
-                                      backgroundColor: _emeraldGreen,
-                                    ),
+                                  ToastHelper.showSuccessToast(
+                                    context,
+                                    isEditing
+                                        ? "Address updated successfully"
+                                        : "Address saved successfully",
                                   );
                                 } else {
                                   ToastHelper.showErrorToast(
                                     context,
-                                    addressVM.errorMessage ?? "Operation failed",
+                                    addressVM.errorMessage ??
+                                        "Operation failed",
                                   );
                                 }
                               },
@@ -273,6 +286,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
         prefixIcon: Icon(icon, color: _goldDark),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
+          // ignore: deprecated_member_use
           borderSide: BorderSide(color: _goldMid.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(

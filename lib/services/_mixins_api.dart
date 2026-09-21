@@ -47,6 +47,14 @@ mixin WebAPIMixin {
           );
         }
 
+        if (statusCode == 404) {
+          throw APIException(
+            enumProperty: EnumAPIExceptions.httpStatusError,
+            message: 'URL not found',
+            data: error.response,
+          );
+        }
+
         final data = error.response?.data;
         if (data is Map && data.containsKey('message')) {
           throw APIException(
@@ -55,7 +63,11 @@ mixin WebAPIMixin {
             data: error.response,
           );
         }
-        msg = error.message ?? "Server error occurred";
+        if (statusCode != null && statusCode >= 500) {
+          msg = "Server error occurred. Please try again later.";
+        } else {
+          msg = "Request failed with status $statusCode";
+        }
         break;
 
       case DioExceptionType.cancel:

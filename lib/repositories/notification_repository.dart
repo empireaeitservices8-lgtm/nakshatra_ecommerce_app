@@ -5,22 +5,7 @@ class NotificationRepository {
   final ApiService _apiService = ApiService();
 
   Future<List<AppNotification>> getNotifications({required String customerId}) async {
-    final response = await _apiService.post('/notification/view', data: {
-      'params': {
-        'customer_id': int.tryParse(customerId) ?? 1,
-      }
-    });
-
-    final resData = response.data;
-    final result = resData['result'];
-    if (result == null) throw Exception('Invalid server response');
-
-    if (result['status'] == 200 || result['status'] == 'success' || result['success'] == true) {
-      final list = result['data'] as List? ?? [];
-      return list.map((item) => AppNotification.fromJson(item)).toList();
-    } else {
-      throw Exception(result['message'] ?? 'Failed to fetch notifications');
-    }
+    return [];
   }
 
   Future<void> markAsRead({required String customerId, required String id}) async {

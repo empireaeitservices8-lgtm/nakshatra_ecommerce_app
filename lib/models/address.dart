@@ -1,8 +1,16 @@
+import 'package:json_annotation/json_annotation.dart';
+
+part 'address.g.dart';
+
+@JsonSerializable()
 class Address {
   final String id;
+  @JsonKey(name: 'type')
   final String label;
+  @JsonKey(name: 'recipient_name')
   final String name;
   final String phone;
+  @JsonKey(name: 'address_details')
   final String address;
 
   Address({
@@ -13,23 +21,31 @@ class Address {
     required this.address,
   });
 
-  factory Address.fromJson(Map<String, dynamic> json) {
-    return Address(
-      id: (json['address_id'] ?? json['id'] ?? '').toString(),
-      label: json['label'] ?? '',
-      name: json['name'] ?? '',
-      phone: json['phone'] ?? '',
-      address: json['address'] ?? '',
-    );
-  }
+  // Backward-compatible and API alias getters
+  String get type => label;
+  String get recipientName => name;
+  String get addressDetails => address;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'label': label,
-      'name': name,
-      'phone': phone,
-      'address': address,
-    };
-  }
+  factory Address.fromJson(Map<String, dynamic> json) =>
+      _$AddressFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AddressToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class AddressListResponse {
+  final String status;
+  final int count;
+  final List<Address> addresses;
+
+  AddressListResponse({
+    required this.status,
+    required this.count,
+    required this.addresses,
+  });
+
+  factory AddressListResponse.fromJson(Map<String, dynamic> json) =>
+      _$AddressListResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AddressListResponseToJson(this);
 }

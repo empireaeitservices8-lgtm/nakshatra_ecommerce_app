@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -15,16 +17,16 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, dynamic>> _messages = [
     {
       'isUser': false,
-      'text': 'Namaste! Welcome to Nakshathra Hallmark Jewellery. How may I assist you today?',
+      'text':
+          'Namaste! Welcome to Nakshathra Hallmark Jewellery. How may I assist you today?',
       'time': '12:00 PM',
-    }
+    },
   ];
 
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
 
-  final Color _goldDark = const Color(0xFFB8860B);
   final Color _goldMid = const Color(0xFFD4A017);
   final Color _emeraldGreen = const Color(0xFF2E513D);
 
@@ -51,11 +53,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.trim().isEmpty) return;
 
     setState(() {
-      _messages.add({
-        'isUser': true,
-        'text': text,
-        'time': 'Just now',
-      });
+      _messages.add({'isUser': true, 'text': text, 'time': 'Just now'});
       _isTyping = true;
     });
     _messageController.clear();
@@ -68,25 +66,34 @@ class _ChatScreenState extends State<ChatScreen> {
       String reply = '';
       final lowerText = text.toLowerCase();
 
-      if (lowerText.contains('purity') || lowerText.contains('hallmark') || lowerText.contains('pure')) {
-        reply = 'All Nakshathra ornaments are certified 916 BIS Hallmarked 22 Karat gold, guaranteeing maximum purity and resale value.';
-      } else if (lowerText.contains('rate') || lowerText.contains('price') || lowerText.contains('cost')) {
-        reply = "Today's live Gold Rate is ₹6,890/gram for 22K Hallmarked Gold, and ₹7,516/gram for 24K Pure Gold.";
-      } else if (lowerText.contains('custom') || lowerText.contains('design') || lowerText.contains('order')) {
-        reply = 'Yes! We custom design jewellery according to your preference. You can share your design sketches with us at orders@nakshathrajewellers.com or call us at +91 90000 00000.';
-      } else if (lowerText.contains('store') || lowerText.contains('location') || lowerText.contains('where')) {
-        reply = 'We have showrooms located in Ernakulam, Kochi, Trivandrum, and Calicut. Our flagship store is located on MG Road, Kochi.';
+      if (lowerText.contains('purity') ||
+          lowerText.contains('hallmark') ||
+          lowerText.contains('pure')) {
+        reply =
+            'All Nakshathra ornaments are certified 916 BIS Hallmarked 22 Karat gold, guaranteeing maximum purity and resale value.';
+      } else if (lowerText.contains('rate') ||
+          lowerText.contains('price') ||
+          lowerText.contains('cost')) {
+        reply =
+            "Today's live Gold Rate is ₹6,890/gram for 22K Hallmarked Gold, and ₹7,516/gram for 24K Pure Gold.";
+      } else if (lowerText.contains('custom') ||
+          lowerText.contains('design') ||
+          lowerText.contains('order')) {
+        reply =
+            'Yes! We custom design jewellery according to your preference. You can share your design sketches with us at orders@nakshathrajewellers.com or call us at +91 90000 00000.';
+      } else if (lowerText.contains('store') ||
+          lowerText.contains('location') ||
+          lowerText.contains('where')) {
+        reply =
+            'We have showrooms located in Ernakulam, Kochi, Trivandrum, and Calicut. Our flagship store is located on MG Road, Kochi.';
       } else {
-        reply = "Thank you for reaching out to Nakshathra. Our support team is online and will get back to you shortly. For immediate assistance, feel free to call +91 90000 00000.";
+        reply =
+            "Thank you for reaching out to Nakshathra. Our support team is online and will get back to you shortly. For immediate assistance, feel free to call +91 90000 00000.";
       }
 
       setState(() {
         _isTyping = false;
-        _messages.add({
-          'isUser': false,
-          'text': reply,
-          'time': 'Just now',
-        });
+        _messages.add({'isUser': false, 'text': reply, 'time': 'Just now'});
       });
       _scrollToBottom();
     });
@@ -150,16 +157,24 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final msg = _messages[index];
                   final isUser = msg['isUser'] as bool;
                   return Align(
-                    alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment: isUser
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width * 0.75,
                       ),
@@ -219,7 +234,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
             if (_isTyping)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Row(
@@ -251,7 +269,10 @@ class _ChatScreenState extends State<ChatScreen> {
               height: 46,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 itemCount: _quickReplies.length,
                 itemBuilder: (context, index) {
                   final q = _quickReplies[index];
@@ -287,10 +308,7 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: cardWhite,
                 border: Border(
-                  top: BorderSide(
-                    color: _goldMid.withOpacity(0.15),
-                    width: 1,
-                  ),
+                  top: BorderSide(color: _goldMid.withOpacity(0.15), width: 1),
                 ),
               ),
               child: Row(
@@ -301,9 +319,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       decoration: BoxDecoration(
                         color: bgCream,
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: _goldMid.withOpacity(0.2),
-                        ),
+                        border: Border.all(color: _goldMid.withOpacity(0.2)),
                       ),
                       child: TextField(
                         controller: _messageController,
