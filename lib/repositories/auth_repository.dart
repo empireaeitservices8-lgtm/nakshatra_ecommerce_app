@@ -175,9 +175,17 @@ class AuthRepository {
         (result['status'] == 'success' ||
             result['status'] == 200 ||
             result['success'] == true)) {
-      final data = (result['data'] is Map)
-          ? result['data'] as Map<String, dynamic>
+      final Map<String, dynamic> data = (result['data'] is Map)
+          ? Map<String, dynamic>.from(result['data'] as Map)
           : Map<String, dynamic>.from(result);
+
+      if (!data.containsKey('branch_id') && result.containsKey('branch_id')) {
+        data['branch_id'] = result['branch_id'];
+      }
+      if (!data.containsKey('branch_name') && result.containsKey('branch')) {
+        data['branch_name'] = result['branch'];
+      }
+
       final token =
           (data['auth_token'] ?? data['token'] ?? data['access_token'] ?? '')
               .toString();

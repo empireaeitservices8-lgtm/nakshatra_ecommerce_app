@@ -77,6 +77,10 @@ class AuthViewModel extends ViewModel {
 
   String? _lastSentOtp;
   String? get lastSentOtp => _lastSentOtp;
+  String? _lastBranch;
+  String? get lastBranch => _lastBranch;
+  int? _lastBranchId;
+  int? get lastBranchId => _lastBranchId;
 
   Future<bool> requestOtp(String phone) async {
     setBusy(true);
@@ -86,6 +90,14 @@ class AuthViewModel extends ViewModel {
       final res = await _repository.sendOtp(phone: phone);
       if (res.containsKey('otp')) {
         _lastSentOtp = res['otp']?.toString();
+      }
+      if (res.containsKey('branch')) {
+        _lastBranch = res['branch']?.toString();
+      }
+      if (res.containsKey('branch_id')) {
+        _lastBranchId = res['branch_id'] is int
+            ? res['branch_id'] as int
+            : int.tryParse(res['branch_id'].toString());
       }
       setBusy(false);
       return true;
