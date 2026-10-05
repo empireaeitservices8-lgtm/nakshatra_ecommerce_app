@@ -34,7 +34,11 @@ class OrderRepository {
     required String shippingCity,
     required String shippingPhone,
     String? notes,
+    String? razorpayPaymentId,
+    String? razorpayOrderId,
+    String? razorpaySignature,
   }) async {
+    final isRazorpay = paymentMethod.toLowerCase() == 'razorpay';
     final response = await _apiService.post(
       '/checkout',
       data: {
@@ -42,11 +46,13 @@ class OrderRepository {
         'method': 'call',
         'params': {
           'customer_id': int.tryParse(customerId) ?? 1,
-          'payment_method': paymentMethod.toLowerCase() == 'cod' ||
-                  paymentMethod.toLowerCase() == 'cash on delivery' ||
-                  paymentMethod.toLowerCase() == 'cash'
-              ? 'cash'
-              : 'cash',
+          'payment_method': isRazorpay ? 'razorpay' : 'cash',
+          if (isRazorpay && razorpayPaymentId != null)
+            'razorpay_payment_id': razorpayPaymentId,
+          if (isRazorpay && razorpayOrderId != null)
+            'razorpay_order_id': razorpayOrderId,
+          if (isRazorpay && razorpaySignature != null)
+            'razorpay_signature': razorpaySignature,
           'shipping_address': shippingAddress,
           'shipping_city': shippingCity.isNotEmpty ? shippingCity : 'Calicut',
           'shipping_phone': shippingPhone,

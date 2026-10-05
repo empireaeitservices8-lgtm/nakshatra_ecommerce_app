@@ -209,7 +209,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _card(List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
-        color: _cardWhite,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -220,7 +219,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ],
       ),
-      child: Column(children: children),
+      child: Material(
+        color: _cardWhite,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: children),
+      ),
     );
   }
 

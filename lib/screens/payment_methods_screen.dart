@@ -530,36 +530,40 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: _cardWhite,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: _goldMid.withAlpha(20)),
                     ),
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _bgCream,
-                          borderRadius: BorderRadius.circular(10),
+                    child: Material(
+                      color: _cardWhite,
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _bgCream,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.account_balance_wallet_outlined,
+                            color: _goldDark,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_outlined,
-                          color: _goldDark,
+                        title: Text(
+                          upi,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _textDark,
+                          ),
                         ),
-                      ),
-                      title: Text(
-                        upi,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: _textDark,
-                        ),
-                      ),
-                      trailing: Text(
-                        "UPI Active",
-                        style: TextStyle(
-                          color: Colors.green.shade700,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                        trailing: Text(
+                          "UPI Active",
+                          style: TextStyle(
+                            color: Colors.green.shade700,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),

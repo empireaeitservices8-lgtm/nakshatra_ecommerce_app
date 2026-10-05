@@ -53,9 +53,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         context,
         'OTP sent successfully to $phone$otpHint',
       );
-      if (authVM.lastSentOtp != null && _otpController.text.isEmpty) {
-        _otpController.text = authVM.lastSentOtp!;
-      }
     } else {
       ToastHelper.showErrorToast(
         context,

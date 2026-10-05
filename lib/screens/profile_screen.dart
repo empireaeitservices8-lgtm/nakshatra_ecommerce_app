@@ -428,7 +428,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         decoration: BoxDecoration(
-          color: _cardWhite,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: _goldMid.withOpacity(0.12), width: 1.2),
           boxShadow: [
@@ -439,8 +438,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-        child: Column(
-          children: List.generate(indices.length, (i) {
+        child: Material(
+          color: _cardWhite,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: List.generate(indices.length, (i) {
             final index = indices[i];
             final item = _menuItems[index];
             final isLast = i == indices.length - 1;
@@ -578,6 +581,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             );
           }),
+        ),
         ),
       ),
     );

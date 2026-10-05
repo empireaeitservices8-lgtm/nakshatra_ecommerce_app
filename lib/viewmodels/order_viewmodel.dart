@@ -90,6 +90,9 @@ class OrderViewModel extends BaseViewModel {
     String? notes,
     String? cardId,
     String? couponCode,
+    String? razorpayPaymentId,
+    String? razorpayOrderId,
+    String? razorpaySignature,
   }) async {
     setBusy(true);
     clearError();
@@ -102,6 +105,9 @@ class OrderViewModel extends BaseViewModel {
         shippingCity: shippingCity ?? 'Calicut',
         shippingPhone: shippingPhone ?? '',
         notes: notes,
+        razorpayPaymentId: razorpayPaymentId,
+        razorpayOrderId: razorpayOrderId,
+        razorpaySignature: razorpaySignature,
       );
       // Wait for /orders API to succeed before marking order placed
       await fetchOrders(customerId, rethrowError: true);

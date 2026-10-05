@@ -4,9 +4,31 @@ import '../services/api_service.dart';
 class PaymentRepository {
   final ApiService _apiService = ApiService();
 
-  Future<List<PaymentMethod>> getPaymentMethods({required String customerId}) async {
-    // API call /payment/view removed
-    return [];
+  Future<PaymentMethodsResult> getPaymentMethods({
+    required String customerId,
+  }) async {
+    final response = await _apiService.post(
+      '/payment_methods',
+      data: {
+        'jsonrpc': '2.0',
+        'params': {'customer_id': int.tryParse(customerId) ?? 1},
+      },
+    );
+
+    final resData = response.data;
+    final result = resData is Map ? (resData['result'] ?? resData) : null;
+    if (result == null) throw Exception('Invalid server response');
+
+    if (result['status'] == 'success' ||
+        result['status'] == 200 ||
+        result['success'] == true) {
+      return PaymentMethodsResult.fromJson(
+        result is Map<String, dynamic>
+            ? result
+            : Map<String, dynamic>.from(result),
+      );
+    }
+    throw Exception(result['message'] ?? 'Failed to fetch payment methods');
   }
 
   Future<PaymentMethod> saveCard({

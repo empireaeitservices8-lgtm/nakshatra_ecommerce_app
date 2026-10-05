@@ -717,7 +717,6 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: cardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppPalette.gold.withOpacity(0.2), width: 1),
         boxShadow: [
@@ -728,52 +727,57 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
           ),
         ],
       ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          leading: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppPalette.gold.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.help_outline_rounded,
-              size: 18,
-              color: AppPalette.goldDark,
-            ),
-          ),
-          title: Text(
-            faq.question,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
+      child: Material(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            leading: Container(
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withOpacity(0.04)
-                    : AppPalette.bgCream.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(10),
+                color: AppPalette.gold.withOpacity(0.12),
+                shape: BoxShape.circle,
               ),
-              child: Text(
-                faq.answer,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  height: 1.5,
-                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+              child: const Icon(
+                Icons.help_outline_rounded,
+                size: 18,
+                color: AppPalette.goldDark,
+              ),
+            ),
+            title: Text(
+              faq.question,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.04)
+                      : AppPalette.bgCream.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  faq.answer,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

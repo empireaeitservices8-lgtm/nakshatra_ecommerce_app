@@ -11,6 +11,7 @@ import '../viewmodels/address_viewmodel.dart';
 import '../viewmodels/payment_viewmodel.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/cart_viewmodel.dart';
+import '../services/razorpay_service.dart';
 
 class CheckoutScreen extends StatefulWidget {
   static const String path = '/checkout';
@@ -64,6 +65,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   double _promoDiscount = 0.0;
   final String _appliedCouponCode = 'FREE100';
 
+  // Razorpay checkout handler
+  final RazorpayService _razorpayService = RazorpayService();
+  bool _isPaying = false;
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +97,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   void dispose() {
+    _razorpayService.dispose();
     _couponController.dispose();
     _cardNumberController.removeListener(_onCardFieldChanged);
     _cardExpiryMonthController.removeListener(_onCardFieldChanged);
@@ -103,6 +109,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _cardCvvController.dispose();
     _cardHolderController.dispose();
     super.dispose();
+  }
+
+  // Razorpay branded badge
+  Widget _buildRazorpayLogo({double size = 24}) {
+    return Icon(Icons.bolt_rounded, color: const Color(0xFF3395FF), size: size);
   }
 
   // Google Pay custom branded logo
@@ -165,6 +176,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         break;
       case 'gpay':
         return _buildGPayLogo(fontSize: 14);
+      case 'razorpay':
+        return _buildRazorpayLogo(size: 22);
       case 'cod':
       default:
         iconData = Icons.monetization_on_outlined;
@@ -1061,6 +1074,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     Color cardWhite,
     Color textDark,
   ) {
+    final paymentVM = Provider.of<PaymentViewModel>(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1075,6 +1089,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
         ),
+        if (paymentVM.isRazorpayEnabled)
+          _buildPaymentOption(
+            id: 'razorpay',
+            title: "Pay Online (Razorpay)",
+            subtitle: "UPI, Cards, Netbanking & Wallets",
+            iconWidget: _buildRazorpayLogo(),
+            isDark: isDark,
+            cardWhite: cardWhite,
+          ),
         _buildPaymentOption(
           id: 'card',
           title: "Debit or Credit Card",
@@ -1145,6 +1168,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildPaymentOption({
     required String id,
     required String title,
+    String? subtitle,
     required Widget iconWidget,
     required bool isDark,
     required Color cardWhite,
@@ -1190,13 +1214,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: isDark ? Colors.white : const Color(0xFF2C1A00),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: isDark ? Colors.white : const Color(0xFF2C1A00),
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             if (isSelected)
@@ -2174,6 +2214,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           "Debit or Credit Card (${activeCard['number'] ?? 'New Card'})";
     }
     if (_selectedPaymentMethod == 'gpay') paymentLabel = "Google Pay";
+    if (_selectedPaymentMethod == 'razorpay') {
+      paymentLabel = "Pay Online (Razorpay)";
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
@@ -3070,7 +3113,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     }
                   }
                 } else if (_currentStep == 3) {
-                  _placeOrder(cart);
+                  if (!_isPaying) _placeOrder(cart);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -3123,10 +3166,51 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       }
     }
 
+    // Online payment via Razorpay must succeed before the order is created.
+    final isRazorpay = _selectedPaymentMethod == 'razorpay';
+    RazorpayResult? rzpResult;
+    if (isRazorpay) {
+      final paymentVM = Provider.of<PaymentViewModel>(context, listen: false);
+      final config = paymentVM.razorpay;
+      if (config == null || !config.isUsable) {
+        ToastHelper.showErrorToast(context, "Online payment is unavailable");
+        return;
+      }
+      final total = _calculateTotal(cart);
+      if (total <= 0) {
+        ToastHelper.showErrorToast(context, "Invalid order amount");
+        return;
+      }
+
+      final user = Provider.of<AuthViewModel>(context, listen: false).currentUser;
+      final activeUpi = paymentVM.upiProfiles.where((u) => u.isActive);
+
+      setState(() => _isPaying = true);
+      rzpResult = await _razorpayService.pay(
+        config: config,
+        amount: total,
+        name: 'Nakshatra',
+        description: 'Jewellery Order',
+        contact: (user?.phone.isNotEmpty ?? false) ? user!.phone : shippingPhone,
+        email: user?.email,
+        preferredUpiId: activeUpi.isNotEmpty ? activeUpi.first.upiId : null,
+      );
+      if (!mounted) return;
+
+      if (!rzpResult.success) {
+        setState(() => _isPaying = false);
+        ToastHelper.showErrorToast(
+          context,
+          rzpResult.errorMessage ?? "Payment failed",
+        );
+        return;
+      }
+    }
+
     final success = await orderVM.placeOrder(
       customerId: customerId,
       addressId: _selectedAddressId,
-      paymentMethod: 'cash',
+      paymentMethod: isRazorpay ? 'razorpay' : 'cash',
       shippingAddress: shippingAddress.isNotEmpty
           ? shippingAddress
           : '123 Main Street',
@@ -3135,13 +3219,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       notes: 'Deliver on weekend if possible',
       cardId: _selectedPaymentMethod == 'card' ? _selectedCardId : null,
       couponCode: _isCouponApplied ? _couponController.text.trim() : null,
+      razorpayPaymentId: rzpResult?.paymentId,
+      razorpayOrderId: rzpResult?.orderId,
+      razorpaySignature: rzpResult?.signature,
     );
+
+    if (mounted) setState(() => _isPaying = false);
 
     if (!success) {
       if (mounted) {
         ToastHelper.showErrorToast(
           context,
-          orderVM.errorMessage ?? "Failed to place order",
+          rzpResult != null
+              ? "Payment received (ID: ${rzpResult.paymentId}) but order failed: "
+                    "${orderVM.errorMessage ?? 'unknown error'}. Please contact support."
+              : (orderVM.errorMessage ?? "Failed to place order"),
         );
       }
       return;

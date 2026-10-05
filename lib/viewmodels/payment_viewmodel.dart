@@ -5,17 +5,25 @@ import '../repositories/payment_repository.dart';
 class PaymentViewModel extends BaseViewModel {
   final PaymentRepository _repository = PaymentRepository();
   List<PaymentMethod> _cards = [];
+  List<UpiProfile> _upiProfiles = [];
+  RazorpayConfig? _razorpay;
 
   PaymentViewModel() : super(name: "PaymentViewModel");
 
   List<PaymentMethod> get cards => _cards;
+  List<UpiProfile> get upiProfiles => _upiProfiles;
+  RazorpayConfig? get razorpay => _razorpay;
+  bool get isRazorpayEnabled => _razorpay?.isUsable ?? false;
 
   Future<void> fetchCards(String customerId) async {
     setBusy(true);
     clearError();
 
     try {
-      _cards = await _repository.getPaymentMethods(customerId: customerId);
+      final res = await _repository.getPaymentMethods(customerId: customerId);
+      _cards = res.cards;
+      _upiProfiles = res.upiProfiles;
+      _razorpay = res.razorpay;
     } catch (e) {
       setErrorMessage(e.toString());
     } finally {

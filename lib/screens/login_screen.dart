@@ -85,10 +85,6 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         'OTP sent successfully to $phone$otpMsg',
       );
-
-      if (otpCode != null && _otpController.text.isEmpty) {
-        _otpController.text = otpCode;
-      }
     } else {
       ToastHelper.showErrorToast(
         context,
